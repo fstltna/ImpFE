@@ -28,8 +28,44 @@ static char rcsid[]="$Id: impcon.c,v 1.2 2000/05/24 21:51:39 marisa Exp $";
 #include "gui.h"
 
 static guint ServWatch=0;	/* GLib watch on the game socket */
+#define SERV_BUF_LEN	2048
+static char ServBuf[SERV_BUF_LEN+1];
 static BOOL DoingLogin=FALSE;
 static BOOL LoseNextChar=FALSE;
+
+/*
+ * The server asks some questions (creating a new player, for example)
+ * with a prompt that has no newline after it. If part of a line arrives
+ * and then nothing more for this long, it is shown as a question.
+ */
+#define PROMPT_DELAY_MS 250
+static guint PromptTimer=0;
+
+static void stopPromptTimer(void)
+{
+	if (PromptTimer != 0)
+	{
+		g_source_remove(PromptTimer);
+		PromptTimer=0;
+	}
+}
+
+/*
+ * showPartialPrompt - the server has gone quiet part way through a line,
+ *                     so it must be waiting for an answer
+ */
+static gboolean showPartialPrompt(gpointer unused)
+{
+	PromptTimer=0;
+	/* Lines starting with '!' are for ImpFE and always end in a newline */
+	if ((ServBuf[0] != '\0') && (ServBuf[0] != '!'))
+	{
+		ui_browser_append(fd_ImpFeMain->MainBrowser, ServBuf);
+		showServerQuestion(ServBuf);
+		ServBuf[0]='\0';
+	}
+	return(G_SOURCE_REMOVE);
+}
 
 /* These get set from our config files
 char game_host[]="localhost";
@@ -134,8 +170,6 @@ int read_data(int sock, char *buf, int len)
 	return(bcount);
 }
 
-#define SERV_BUF_LEN	2048
-static char ServBuf[SERV_BUF_LEN+1];
 /*
  * stopServWatch - stops watching the game socket for input
  */
@@ -175,11 +209,20 @@ static gboolean handleServInp(GIOChannel *chan, GIOCondition cond, gpointer data
 		/* Check for Newline */
 		if (locBuf[0] == '\n')
 		{
+		    stopPromptTimer();
+		    /* The first ImpFE prompt means we are logged in */
+		    if ((ServBuf[0] == '!') && (ServBuf[1] == '('))
+		    {
+				DoingLogin=FALSE;
+		    }
 		    /* Parse it */
 		    fe_parse(ServBuf);
 		    ServBuf[0]='\0';
 		}
 		else {
+			/* Show it as a question if nothing more comes for a moment */
+			stopPromptTimer();
+			PromptTimer=g_timeout_add(PROMPT_DELAY_MS, showPartialPrompt, NULL);
 			/* Check for a prompt line */
 			if (DoingLogin)
 			{
@@ -200,6 +243,12 @@ static gboolean handleServInp(GIOChannel *chan, GIOCondition cond, gpointer data
 							ui_browser_append(fd_ImpFeMain->MainBrowser,
 												   "\n");
 						}
+						else
+						{
+							/* They have to type it in */
+							setInputMode(INPUT_PLAYER_NAME);
+							showServerQuestion(ServBuf);
+						}
 					}
 					else if (strcmp(ServBuf, ":Enter player password:") == 0)
 					{
@@ -212,6 +261,11 @@ static gboolean handleServInp(GIOChannel *chan, GIOCondition cond, gpointer data
 							ui_browser_append(fd_ImpFeMain->MainBrowser,
 												   "********\n");
 						}
+						else
+						{
+							/* They have to type it in */
+							showServerQuestion(ServBuf);
+						}
 						DoingLogin=FALSE;
 					}
 					ServBuf[0]='\0';
@@ -223,6 +277,8 @@ static gboolean handleServInp(GIOChannel *chan, GIOCondition cond, gpointer data
 	{
 		/* The watch is removed when we return FALSE */
 		ServWatch=0;
+		stopPromptTimer();
+		setInputMode(INPUT_NORMAL);
 		/* Close the socket */
 		close(GameSocket);
 		GameSocket=-1;
@@ -252,6 +308,8 @@ BOOL cmd_connect(BOOL kill_it)
 		{
 			/* Remove the callback */
 			stopServWatch();
+			stopPromptTimer();
+			setInputMode(INPUT_NORMAL);
 			/* Close the socket */
 			close(GameSocket);
 			GameSocket=-1;

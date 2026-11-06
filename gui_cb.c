@@ -60,6 +60,47 @@
 
 static char OutBuf[2048];
 
+/* What the next line typed into the input box is (see setInputMode) */
+static InputMode_t InputMode=INPUT_NORMAL;
+
+/*
+ * setInputMode - sets what the next line typed in is for: a password is
+ *                hidden as it is typed and not echoed, and a player name
+ *                is sent with the '!' that tells the server we are ImpFE
+ */
+void setInputMode(InputMode_t mode)
+{
+	InputMode=mode;
+	gtk_entry_set_visibility(GTK_ENTRY(fd_ImpFeMain->MainInputBox),
+		mode != INPUT_SECRET);
+}
+
+/*
+ * showServerQuestion - the server has asked something (without ImpFE's
+ *                      usual prompt line); show it in the prompt box
+ */
+void showServerQuestion(const char *question)
+{
+	char work[256];
+	size_t len;
+
+	g_strlcpy(work, question, sizeof(work));
+	/* Drop the trailing ": " and the like */
+	len=strlen(work);
+	while ((len > 0) && ((work[len - 1] == ' ') || (work[len - 1] == ':') ||
+		(work[len - 1] == '\n') || (work[len - 1] == '\r')))
+	{
+		work[--len]='\0';
+	}
+	/* Strip a leading ':' (":Enter player name") */
+	ui_set_text(fd_ImpFeMain->MainPrompt, (work[0] == ':') ? &work[1] : work);
+	if (strstr(work, "assword") != NULL)
+	{
+		setInputMode(INPUT_SECRET);
+	}
+	gtk_widget_grab_focus(fd_ImpFeMain->MainInputBox);
+}
+
 /* callbacks for form ImpFeMain */
 
 /*
@@ -68,18 +109,45 @@ static char OutBuf[2048];
  */
 void MainInputBox_cb(GtkWidget *w, /*@unused@*/gpointer data)
 {
+	InputMode_t mode = InputMode;
+
 	/* Copy out what they typed */
-	g_strlcpy(OutBuf, ui_entry_get(fd_ImpFeMain->MainInputBox), sizeof(OutBuf));
-	/* Clear the input box */
+	if (mode == INPUT_PLAYER_NAME)
+	{
+		/* The '!' tells the server this is ImpFE */
+		const char *name = ui_entry_get(fd_ImpFeMain->MainInputBox);
+
+		while (*name == ' ')
+		{
+			name++;
+		}
+		g_snprintf(OutBuf, sizeof(OutBuf), "%s%s",
+			(name[0] == '!') ? "" : "!", name);
+	}
+	else
+	{
+		g_strlcpy(OutBuf, ui_entry_get(fd_ImpFeMain->MainInputBox),
+			sizeof(OutBuf));
+	}
+	/* Clear the input box, and go back to normal input */
 	ui_entry_set(fd_ImpFeMain->MainInputBox, "");
+	setInputMode(INPUT_NORMAL);
 	/* Send it on to the server */
 	if (GameSocket != -1)
 	{
 		(void) write_data(GameSocket, OutBuf, (int) strlen(OutBuf));
 		(void) write_data(GameSocket, "\n", 1);
 	}
-	ui_browser_append(fd_ImpFeMain->MainBrowser, OutBuf);
-	ui_browser_append(fd_ImpFeMain->MainBrowser, "\n");
+	if (mode == INPUT_SECRET)
+	{
+		ui_browser_append(fd_ImpFeMain->MainBrowser, "********\n");
+	}
+	else
+	{
+		ui_browser_append(fd_ImpFeMain->MainBrowser,
+			(mode == INPUT_PLAYER_NAME) ? &OutBuf[1] : OutBuf);
+		ui_browser_append(fd_ImpFeMain->MainBrowser, "\n");
+	}
 }
 
 void MainHelpMenu_cb(/*@unused@*/GtkWidget *menu, int item)

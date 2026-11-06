@@ -3,6 +3,9 @@ Changes by date
 
 =20261106=
 * Version 0.3.0
+* Fixed ImpFE appearing to hang when creating a new player: questions the
+  server asks without a newline are now shown, password answers are hidden,
+  and a player name typed at the login prompt is sent in ImpFE mode
 * Fixed "Invalid configuration line found" when opening a database whose
   player name or password was never set; blank lines and Windows line
   endings in .fe files are accepted, and errors show the bad line

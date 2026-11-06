@@ -391,6 +391,16 @@ extern BOOL cmd_connect(BOOL kill_it);
 extern int write_data(int sock, const char *buf, int len);
 extern void write_str(const char *buf);
 
+/* gui_cb.c - what the next line typed into the main input box is for */
+typedef enum
+{
+	INPUT_NORMAL,		/* a command or answer */
+	INPUT_SECRET,		/* a password - hidden, not echoed */
+	INPUT_PLAYER_NAME	/* the player name at login */
+} InputMode_t;
+extern void setInputMode(InputMode_t mode);
+extern void showServerQuestion(const char *question);
+
 /* main.c */
 extern void setDefaults(void);
 
