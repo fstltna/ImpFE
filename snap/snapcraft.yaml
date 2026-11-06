@@ -42,10 +42,8 @@ parts:
     plugin: make
     source: .
     make-parameters: [PREFIX=/usr]
-    override-pull: |
-      craftctl default
-      craftctl set version="$(sed -n 's/^#define FE_\(VER\|REV\|PATCH\)[[:space:]]*"\(.*\)"/\2/p' version.h | paste -sd.)"
     override-build: |
       # Don't reuse objects (or the prebuilt binary) from the source tree
       make clean
       craftctl default
+      craftctl set version="$(sed -n 's/^#define FE_\(VER\|REV\|PATCH\)[[:space:]]*"\(.*\)"/\2/p' version.h | paste -sd.)"
