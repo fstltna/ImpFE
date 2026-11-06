@@ -3,7 +3,7 @@
 @C1@l@c@bImpFE
 
  Copyright (c) 1997-2026
-      Marisa Giancarla (fstltna@yahoo.com)
+      Marisa Giancarla (marisag@haikumail.online)
 
  See the Copyright file included in the distribution
 
