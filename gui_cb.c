@@ -89,7 +89,7 @@ void MainHelpMenu_cb(/*@unused@*/GtkWidget *menu, int item)
 	    case MAIN_HELP_MENU_ABOUT:
 			ui_set_text(fd_ImpFeAbout->ImpVer, "ImpFE v" FE_VER "." FE_REV "." FE_PATCH);
 			ui_set_text(fd_ImpFeAbout->MainAboutText,
-								"(C) 1997-2021 Marisa Giancarla\n\n"
+								"(C) 1997-2026 Marisa Giancarla\n\n"
 								"For more information contact <fstltna@yahoo.com>\n"
 								"or go to the Imperium home page at:\n"
 								"<https://EmpireDirectory.net>");
