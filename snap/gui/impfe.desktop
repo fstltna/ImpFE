@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=ImpFE
+GenericName=Imperium Client
+Comment=Play Imperium, the multi-player space strategy game
+Exec=impfe
+Icon=${SNAP}/meta/gui/impfe.png
+Terminal=false
+Categories=Game;StrategyGame;
+Keywords=Imperium;strategy;space;

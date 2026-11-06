@@ -1,3 +1,4 @@
 *.o
 *.d
 help.h
+*.snap

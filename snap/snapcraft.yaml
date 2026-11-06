@@ -1,0 +1,51 @@
+name: impfe
+title: ImpFE
+summary: GUI client for the online multiplayer game Imperium
+description: |
+  ImpFE is a graphical client for Imperium, a multi-player science fiction
+  strategy game played over the network. It shows the server's output and
+  prompt, keeps a local database of the ships and planets you have seen,
+  draws a map of the galaxy, and can queue commands to send to the server.
+
+  Imperium is both real time and turn based: players earn money operating
+  starships, mine ore and gold, trade with other players, and can play as
+  teams or free-for-all.
+adopt-info: impfe        # the version comes from version.h
+base: core24
+grade: stable
+confinement: strict
+license: GPL-1.0-or-later
+icon: snap/gui/impfe.png
+website: https://EmpireDirectory.net
+source-code: https://github.com/fstltna/Impfe
+
+platforms:
+  amd64:
+  arm64:
+
+apps:
+  impfe:
+    command: usr/bin/impfe
+    # GTK 3 and the desktop plumbing (X11, Wayland, themes, fonts)
+    extensions: [gnome]
+    plugs:
+      - network   # talk to the Imperium server
+      - home      # ImpFE databases live in the user's home folder
+    environment:
+      # A database is a .fe file plus several companion files next to it.
+      # The portal file chooser only grants access to the one file picked,
+      # so use GTK's own chooser, which works through the home plug.
+      GTK_USE_PORTAL: "0"
+
+parts:
+  impfe:
+    plugin: make
+    source: .
+    make-parameters: [PREFIX=/usr]
+    override-pull: |
+      craftctl default
+      craftctl set version="$(sed -n 's/^#define FE_\(VER\|REV\|PATCH\)[[:space:]]*"\(.*\)"/\2/p' version.h | paste -sd.)"
+    override-build: |
+      # Don't reuse objects (or the prebuilt binary) from the source tree
+      make clean
+      craftctl default

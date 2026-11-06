@@ -773,7 +773,20 @@ const char *ui_file_select(GtkWidget *parent, const char *title,
 		gtk_file_filter_add_pattern(filter, "*");
 		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dlg), filter);
 	}
-	cwd = (LastDir[0] != '\0') ? g_strdup(LastDir) : g_get_current_dir();
+	if (LastDir[0] != '\0')
+	{
+		cwd = g_strdup(LastDir);
+	}
+	else if (g_getenv("SNAP_REAL_HOME") != NULL)
+	{
+		/* In a snap, $HOME is the snap's private folder - start in the
+		   user's real home folder instead */
+		cwd = g_strdup(g_getenv("SNAP_REAL_HOME"));
+	}
+	else
+	{
+		cwd = g_get_current_dir();
+	}
 	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dlg), cwd);
 	if (create)
 	{

@@ -15,6 +15,11 @@ ImpFE needs a C compiler and the GTK 3 development files. On Debian/Ubuntu:
     make
     sudo make install
 
+To build the snap instead (needs snapcraft):
+
+    snapcraft
+    sudo snap install --dangerous ./impfe_*.snap
+
 In Imperium players will be given a certain amount of money to pay for the expenses of operating a starship, and may try to increase their wealth by mining ore and gold, selling items to other players, etc.
 
 Imperium can be played as a "team" game, with all players of a given race working togather, as a free-for-all, or any combination of the two.  Ships may be "programmed" to do simple actions repeatedly, and there are mining robots you can drop on an uninhabitable planet and pick up later.

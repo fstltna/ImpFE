@@ -2,6 +2,10 @@ Changes by date
 ===============
 
 =20261106=
+* Version 0.3.0
+* Snap: moved to snap/snapcraft.yaml, core24 base and the GNOME extension,
+  built from source (amd64 and arm64), with network/home access and a
+  desktop launcher
 * Converted the GUI from XForms to GTK 3
 * Replaced autoconf with a plain Makefile (Linux only)
 * Fixed a buffer overflow that crashed the planet census
