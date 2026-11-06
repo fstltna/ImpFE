@@ -1,20 +1,13 @@
-Quick compilation instructions:
+Quick compilation instructions (Linux):
 
-1) Extract libao-1.2.0.tar.gz and enter the directory
-2) ./configure
-3) make
-4) make install
-5) Extract mpg123-1.22.2.tar.bz2 and enter the directory
-6) ./configure
-7) make
-8) make install
-9) cd ..
-10) run: "sudo apt install libforms-bin"
-11) run: "sudo apt install libforms-dev"
-12) ./configure
-13) make
-14) make install
+1) Install a compiler and the GTK 3 development files, e.g. on
+   Debian/Ubuntu:
+       sudo apt install build-essential pkg-config libgtk-3-dev
+2) make
+3) sudo make install
 
-   Or just copy impfe somewhere in your path. impfe.music.mp3 must go in /bin
+   This installs impfe into /usr/local/bin and its man page into
+   /usr/local/share/man. Use "make install PREFIX=/usr" to change that,
+   or just copy impfe somewhere in your path.
 
 Default server port for Imperium is 3458

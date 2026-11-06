@@ -41,34 +41,27 @@ static const char rcsid[] = "$Id: help.c,v 1.1.1.1 2000/05/17 19:22:13 marisa Ex
  */
 
 #include "config.h"
-#include "forms.h"
 #include "ImpFeGui.h"
 #include "gui.h"
 #include "impfe.h"
 #include "help.h"
 
-/*
- * help_close_form - generic call-back for closing a form
- */
-int help_close_form(FL_FORM *form, void *unused)
-{
-        /*fl_hide_form(form);*/
-        return(FL_OK);
-}
-
-
 void help(char *chapter)
 {
-	static int item;
 	int i;
 	int chapter_line = 0;
 	int line_count = 0;
 	BOOL redisp = FALSE; /* Are we just updating an existing display? */
 
-	if (fl_form_is_visible(fd_HelpForm->HelpForm))
+	if (ui_window_visible(fd_HelpForm->HelpForm))
 	{
-		XRaiseWindow(fl_display, fd_HelpForm->HelpForm->window);
+		gtk_window_present(GTK_WINDOW(fd_HelpForm->HelpForm));
 		redisp = TRUE;
+	}
+	else
+	{
+		/* (Re)load the text from scratch */
+		ui_browser_clear(fd_HelpForm->Help_Browser);
 	}
 
 	i = 0;
@@ -91,52 +84,39 @@ void help(char *chapter)
 		{
 			if (strlen(help_txt[i]) < 1)
 			{
-				fl_add_browser_line(fd_HelpForm->Help_Browser, " ");
+				ui_browser_add_line(fd_HelpForm->Help_Browser, " ");
 			}
 			else
 			{
-				fl_add_browser_line(fd_HelpForm->Help_Browser, help_txt[i]);
+				ui_browser_add_line(fd_HelpForm->Help_Browser, help_txt[i]);
 			}
 		}
 		line_count++;
 		i++;
 	}
 
-	fl_set_browser_topline(fd_HelpForm->Help_Browser, chapter_line+1);
-
-	if (redisp)
+	if (!redisp)
 	{
-		return;
+		ui_window_show(fd_HelpForm->HelpForm);
 	}
-
-	fl_set_form_atclose(fd_HelpForm->HelpForm, help_close_form, &item);
- 
-/*	fl_set_initial_placement(fd_HelpForm->HelpForm, main_form->x, main_form->y, 500, 300);*/
-	fl_set_form_minsize(fd_HelpForm->HelpForm, 400, 200);
-
-	fl_show_form(fd_HelpForm->HelpForm, FL_PLACE_FREE, FL_FULLBORDER, "Help for ImpFE");
-
-	return;
+	ui_browser_set_topline(fd_HelpForm->Help_Browser, chapter_line+1);
 }
 
-void cb_help_button(FL_OBJECT *obj, long param)
+void cb_help_button(long param)
 {
-	if (!obj || (param < 0) || (param >= TOTAL_CHAPTERS))
+	if ((param < 0) || (param >= TOTAL_CHAPTERS))
 	{
 		return;
 	}
 
 	help(chapters[param]);
-
-	return;
 }
 
-void HelpOk_cb(FL_OBJECT *obj, long param)
+void HelpOk_cb(GtkWidget *w, gpointer data)
 {
 	/* If window not open, just return */
-	if (fl_form_is_visible(fd_HelpForm->HelpForm))
+	if (ui_window_visible(fd_HelpForm->HelpForm))
 	{
-		fl_hide_form(fd_HelpForm->HelpForm);
+		ui_window_hide(fd_HelpForm->HelpForm);
 	}
 }
-

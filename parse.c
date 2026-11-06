@@ -66,7 +66,6 @@ static char rcsid[]="$Id: parse.c,v 1.2 2000/05/25 23:48:19 marisa Exp $";
 #else
 #include <strings.h>
 #endif
-#include "forms.h"
 #include "impfe.h"
 #include "ImpFeGui.h"
 #include "ImpFeMess.h"
@@ -87,7 +86,7 @@ ULONG LastPlanet=0; /* Last planet seen (for handling planet rpt 2nd line) */
 void handleComment(const char *string)
 {
 	sprintf(ParseBuf, "_%s\n", string);
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, ParseBuf);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, ParseBuf);
 }
 
 void handlePrompt(const char *string)
@@ -98,63 +97,57 @@ void handlePrompt(const char *string)
 	/* Check for status type prompts */
 	if (string[0] == '!')
 	{
-	    fl_set_object_label(fd_ImpFeMain->MainPrompt, &string[1]);
+	    ui_set_text(fd_ImpFeMain->MainPrompt, &string[1]);
 	    AtMainPrompt=FALSE;
 	    return;
 	}
 	else
 	{
-	    fl_set_object_label(fd_ImpFeMain->MainPrompt, string);
+	    ui_set_text(fd_ImpFeMain->MainPrompt, string);
 	}
 	/* See if at the main prompt */
 	if (sscanf(string, "[%d:%d] Command", &tmpBtu, &tmpTime) == 2)
 	{
 	    AtMainPrompt=TRUE;
 	    sprintf(locBuf, "%d", tmpBtu);
-	    fl_set_object_label(fd_ImpFeMain->BtuDisp, locBuf);
+	    ui_set_text(fd_ImpFeMain->BtuDisp, locBuf);
 	    if (tmpBtu < BTU_WARN)
 	    {
 			if (tmpBtu < BTU_CRIT)
 			{
-				fl_set_object_lcol(fd_ImpFeMain->BtuDisp, FL_RED);
-				fl_set_object_color(fd_ImpFeMain->BtuDisp, FL_BLACK, FL_MCOL);
+				ui_set_level(fd_ImpFeMain->BtuDisp, UI_LEVEL_CRIT);
 			}
 			else
 			{
-				fl_set_object_lcol(fd_ImpFeMain->BtuDisp, FL_BLACK);
-				fl_set_object_color(fd_ImpFeMain->BtuDisp, FL_TOMATO, FL_MCOL);
+				ui_set_level(fd_ImpFeMain->BtuDisp, UI_LEVEL_WARN);
 			}
 	    }
 	    else
 	    {
 			if (game_btus < BTU_WARN)
 			{
-				fl_set_object_lcol(fd_ImpFeMain->BtuDisp, FL_BLACK);
-				fl_set_object_color(fd_ImpFeMain->BtuDisp, FL_WHEAT, FL_MCOL);
+				ui_set_level(fd_ImpFeMain->BtuDisp, UI_LEVEL_NORMAL);
 			}
 	    }
 	    game_btus=tmpBtu;
 	    sprintf(locBuf, "%d", tmpTime);
-	    fl_set_object_label(fd_ImpFeMain->TimeDisp, locBuf);
+	    ui_set_text(fd_ImpFeMain->TimeDisp, locBuf);
 	    if (tmpTime < TIME_WARN)
 	    {
 			if (tmpTime < TIME_CRIT)
 			{
-				fl_set_object_lcol(fd_ImpFeMain->TimeDisp, FL_RED);
-				fl_set_object_color(fd_ImpFeMain->TimeDisp, FL_BLACK, FL_MCOL);
+				ui_set_level(fd_ImpFeMain->TimeDisp, UI_LEVEL_CRIT);
 			}
 			else
 			{
-				fl_set_object_lcol(fd_ImpFeMain->TimeDisp, FL_BLACK);
-				fl_set_object_color(fd_ImpFeMain->TimeDisp, FL_TOMATO, FL_MCOL);
+				ui_set_level(fd_ImpFeMain->TimeDisp, UI_LEVEL_WARN);
 			}
 	    }
 	    else
 	    {
 			if (game_time < TIME_WARN)
 			{
-				fl_set_object_lcol(fd_ImpFeMain->TimeDisp, FL_BLACK);
-				fl_set_object_color(fd_ImpFeMain->TimeDisp, FL_WHEAT, FL_MCOL);
+				ui_set_level(fd_ImpFeMain->TimeDisp, UI_LEVEL_NORMAL);
 			}
 	    }
 	    game_time=tmpTime;
@@ -175,7 +168,7 @@ void handleRace1(const char *line)
 	/* Make sure this gets saved */
 	DirtyData=TRUE;
 	/* Show the line */
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, line);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/* Race # | Race Name | Tech Lev | # Planets | Status */
 	if (sscanf(line, "| %u | %s | %u | %u | %s |", &raceNum, raceName,
 			   &techLev, &numPlan, raceStatus) != 5)
@@ -196,7 +189,7 @@ void handleRace2(const char *line)
 	/*DirtyData=TRUE;*/
 	/* Home planet name | Res Lev | # Players */
 	/* "| | %s | %u | %u | |" */
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, line);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 }
 
 void handlePlayerList(const char *line)
@@ -208,7 +201,7 @@ void handlePlayerList(const char *line)
 
 	/* Make sure this gets saved */
 	DirtyData=TRUE;
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, line);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/*  Player # | Day Mon Date Time | Game Time | BTU | Status | Race | Name */
 	if (sscanf(line, "%u  %s  %s %s %s [%u] [%u] %s %s %s", &playNum,
 			   lastDay, lastMon, lastDate, lastTime, &playTime,
@@ -281,7 +274,7 @@ void handlePowerRpt(const char *line)
 
 	/* Make sure this gets saved */
 	DirtyData=TRUE;
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, line);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/*  # Plan | # civ | # mil | sh | gun | pl | bars | % | ships | $$$ | power | Name */
 	if ((tmp=sscanf(line, "%u %u %u %u %u %u %u %u %u %d %d %s",
 			   &plan, &civ, &mil, &sh, &gun, &pl, &bar, &pct, &ship,
@@ -344,7 +337,7 @@ void handleShipStatus(const char *line)
 
 	/* Make sure this gets saved */
 	DirtyData=TRUE;
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, line);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/*  Ship # | Type | Row,Col | Fleet | Eff | TF | Energ | Fuel |Armor | Price | Planet | Name */
 	if ((line[12] != '|') || (line[22] != '|') || (line[24] != '|') ||
 		(line[28] != '%'))
@@ -431,7 +424,7 @@ void handleSRS(const char *line)
 	/* Make sure this gets saved */
 	DirtyData=TRUE;
 	workPtr=&line[9];
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, workPtr);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, workPtr);
 	/* Get the left coord */
 	strncpy(work, line, 4 * sizeof(char));
 	work[4]='\0';
@@ -555,7 +548,7 @@ void handlePlProd1(const char *line)
 
 	/* Make sure this gets saved */
 	DirtyData=TRUE;
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, line);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/* All of the below are scaled production amounts */
 	/* Civ | Mil | Tech | Res | Edu | OCS | OM | GM | ATn | FTn | Wea | Eng | Hul | Misl | Pln | Elc | Cash | Pl # |*/
 	if ((line[0] != '|') || (line[4] != '|') || (line[8] != '|') ||
@@ -663,7 +656,7 @@ void handlePlProd2(const char *line)
 
 	/* Make sure this gets saved */
 	DirtyData=TRUE;
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, line);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/* All of the below are production percentages (0-100) */
 	/* Civ | Mil | Tech | Res | Edu | OCS | OM | GM | ATn | FTn | Wea | Eng | Hul | Misl | Pln | Elc | Cash | Pl # |*/
 	if ((line[0] != '|') || (line[4] != '|') || (line[8] != '|') ||
@@ -769,7 +762,7 @@ void handlePlGeo(const char *line)
 
 	/* Make sure this gets saved */
 	DirtyData=TRUE;
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, line);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/* PC | Sz | Eff | Min | Gold | Pol | Gas | Wat | Mob | Ore | Bar | TF | ResL | Pl # | Position */
 	if ((tmp=sscanf(line, "%s %u %u %u %u %u %u %u %u %u %u %u %u %u %s",
 					pc, &size, &eff, &minr, &gold, &polut, &gas, &water,
@@ -848,7 +841,7 @@ void handlePlPop(const char *line)
 
 	/* Make sure this gets saved */
 	DirtyData=TRUE;
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, line);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/* PC | Civ | Sci | Mil | Ofc | BTU | Pop% | PF | Race | Pl # | Name */
 	tmp=sscanf(line, "%s %u %u %u %u %u %u %u %u %u %s",
 					pc, &civil, &scien, &mil, &ofc, &BTU, &PopPct, &PF,
@@ -908,7 +901,7 @@ void handleShipCargo(const char *line)
 
 	/* Make sure this gets saved */
 	DirtyData=TRUE;
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, line);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/*  Ship # | Type | Avl | Civ | Sci | Mil | Ofc | Mis | Pln | Ore | Bar | Air | FTn | Cmp | Eng | Lif | Ele | Wpn*/
 	if ((line[10] != '|') || (line[14] != '|') || (line[18] != '|') ||
 		(line[22] != '|'))
@@ -1006,7 +999,7 @@ void handleShipBig(const char *line)
 
 	/* Make sure this gets saved */
 	DirtyData=TRUE;
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, line);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/*  Item # | Ship # | TF | T | Wgt | Eff | Ins */
 	if ((line[8] != '|') || (line[17] != '|') || (line[22] != '|') ||
 		(line[26] != '|'))
@@ -1070,7 +1063,7 @@ void handlePlanetBig(const char *line)
 
 	/* Make sure this gets saved */
 	DirtyData=TRUE;
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, line);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/*  Item # | Plan # | TF | T | Wgt | Eff | Ins */
 	if ((line[8] != '|') || (line[17] != '|') || (line[22] != '|') ||
 		(line[26] != '|'))
@@ -1148,7 +1141,7 @@ void handleWorldSize(const char *line)
 	unsigned int sizex, sizey;
 	char work[80];
 
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, line);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 
 	if ((tmp=sscanf(line, "World size: %u rows by %u columns", &sizey,
 					&sizex)) != 2)
@@ -1815,7 +1808,7 @@ void fe_parse(const char *buf)
 	if (buf[0] != '!')
 	{
 		/* Display it */
-	    fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, buf);
+	    ui_browser_append(fd_ImpFeMain->MainBrowser, buf);
 	    return;
 	}
 	/* Do it this way to speed things up */
@@ -1831,14 +1824,14 @@ void fe_parse(const char *buf)
 			handlePrompt(ParseBuf);
 			if (ParseBuf[0] != '!')
 			{
-			    fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, ParseBuf);
-			    fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, ": ");
+			    ui_browser_append(fd_ImpFeMain->MainBrowser, ParseBuf);
+			    ui_browser_append(fd_ImpFeMain->MainBrowser, ": ");
 			}
 			break;
 		case '[':	/* Get line from user */
 		case ']':	/* Cancel get line */
 			/* Currently unused */
-			/*fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, buf);*/
+			/*ui_browser_append(fd_ImpFeMain->MainBrowser, buf);*/
 			break;
 		case '@':	/* Planet reports */
 			switch (buf[2])
@@ -1862,7 +1855,7 @@ void fe_parse(const char *buf)
 					handlePlPop(&buf[3]);
 					break;
 				case '3': /* Item report */
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, buf);
+					ui_browser_append(fd_ImpFeMain->MainBrowser, buf);
 					break;
 				case '4': /* Planet big item rpt */
 					handlePlanetBig(&buf[3]);
@@ -1885,7 +1878,7 @@ void fe_parse(const char *buf)
 					handlePlScan(&buf[3]);
 					break;
 				case '7': /* Planet ret scan line */
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, buf);
+					ui_browser_append(fd_ImpFeMain->MainBrowser, buf);
 					break;
 				default:
 					fprintf(stderr, "*** unknown FE planet code type: '%c'\n", buf[2]);
@@ -1896,7 +1889,7 @@ void fe_parse(const char *buf)
 			switch (buf[2])
 			{
 				case 'D': /* Ship dump line */
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, buf);
+					ui_browser_append(fd_ImpFeMain->MainBrowser, buf);
 					break;
 				case 'U': /* Dirty ship */
 					tmp=(unsigned long) atoi(&buf[3]);
@@ -1917,16 +1910,16 @@ void fe_parse(const char *buf)
 					handleShipBig(&buf[3]);
 					break;
 				case '4': /* Ship config rept */
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, buf);
+					ui_browser_append(fd_ImpFeMain->MainBrowser, buf);
 					break;
 				case '5': /* Ship scan line */
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, buf);
+					ui_browser_append(fd_ImpFeMain->MainBrowser, buf);
 					break;
 				case '6': /* Ship detected via scan */
 					handleShipScDet(&buf[3]);
 					break;
 				case '7': /* Ship retscan line */
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, buf);
+					ui_browser_append(fd_ImpFeMain->MainBrowser, buf);
 					break;
 				default:
 					fprintf(stderr, "*** unknown FE ship code type: '%c'\n", buf[2]);
@@ -1940,10 +1933,10 @@ void fe_parse(const char *buf)
 					handleSRS(&buf[3]);
 					break;
 				case 'R': /* LRS */
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, buf);
+					ui_browser_append(fd_ImpFeMain->MainBrowser, buf);
 					break;
 				case 'V': /* Visual */
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, buf);
+					ui_browser_append(fd_ImpFeMain->MainBrowser, buf);
 					break;
 				default:
 					fprintf(stderr, "*** unknown FE scan code type: '%c'\n", buf[2]);
@@ -1954,7 +1947,7 @@ void fe_parse(const char *buf)
 			switch (buf[2])
 			{
 				case 'C': /* Change request */
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, buf);
+					ui_browser_append(fd_ImpFeMain->MainBrowser, buf);
 					break;
 				case 'L': /* Player list */
 					handlePlayerList(&buf[3]);
@@ -1985,7 +1978,7 @@ void fe_parse(const char *buf)
 					switch (buf[3])
 					{
 						case 'H':
-							fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, &buf[4]);
+							ui_browser_append(fd_ImpFeMain->MainBrowser, &buf[4]);
 							if (buf[15] != ':')
 							{
 								fprintf(stderr, "*** unknown player status home planet line\n");
@@ -2006,7 +1999,7 @@ void fe_parse(const char *buf)
 							}
 							break;
 						case 'S':
-							fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, &buf[4]);
+							ui_browser_append(fd_ImpFeMain->MainBrowser, &buf[4]);
 							break;
 						default:
 							fprintf(stderr, "*** Unknown player status type '%c'\n", buf[3]);
@@ -2014,7 +2007,7 @@ void fe_parse(const char *buf)
 					}
 					break;
 				case 'A': /* Realm follows */
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, buf);
+					ui_browser_append(fd_ImpFeMain->MainBrowser, buf);
 					break;
 				default:
 					fprintf(stderr, "*** unknown FE misc code type: '%c'\n", buf[2]);
@@ -2025,10 +2018,10 @@ void fe_parse(const char *buf)
 			switch (buf[2])
 			{
 				case 'L': /* Last attack failed */
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, buf);
+					ui_browser_append(fd_ImpFeMain->MainBrowser, buf);
 					break;
 				case 'W': /* Last attack succeeded */
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, buf);
+					ui_browser_append(fd_ImpFeMain->MainBrowser, buf);
 					break;
 				default:
 					fprintf(stderr, "*** unknown FE combat result code type: '%c'\n", buf[2]);

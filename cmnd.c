@@ -43,7 +43,6 @@ static char rcsid[]="$Id: cmnd.c,v 1.2 2000/05/24 21:51:38 marisa Exp $";
 #else
 #include <strings.h>
 #endif
-#include "forms.h"
 #include "impfe.h"
 #include "ImpFeGui.h"
 #include "ImpFeMess.h"
@@ -81,8 +80,8 @@ int addCmd(const char *line, int priority)
 		{
 			if (QueueEcho)
 			{
-				fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, "[QUE] ");
-				fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, line);
+				ui_browser_append(fd_ImpFeMain->MainBrowser, "[QUE] ");
+				ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 			}
 			write_str(line);
 			return(-1); /* Value is meaningless in this case */
@@ -97,8 +96,8 @@ int addCmd(const char *line, int priority)
 			strncpy(CmdArray[tmp].cmdbuf, line, (MAX_CMD_LEN-1) * sizeof(char));
 			NumCmds++;
 			sprintf(locBuf, "%d", NumCmds);
-			fl_set_object_label(fd_ImpFeMain->QueueDisp, locBuf);
-			if (fl_form_is_visible(fd_CommandForm->CommandForm))
+			ui_set_text(fd_ImpFeMain->QueueDisp, locBuf);
+			if (ui_window_visible(fd_CommandForm->CommandForm))
 			{
 				buildCmdList();
 			}
@@ -137,7 +136,7 @@ BOOL modCmd(int pos, const char *line, int priority)
 		}
 	}
 	strncpy(CmdArray[pos].cmdbuf, locBuf, (MAX_CMD_LEN-1) * sizeof(char));
-	if (fl_form_is_visible(fd_CommandForm->CommandForm))
+	if (ui_window_visible(fd_CommandForm->CommandForm))
 	{
 		buildCmdList();
 	}
@@ -176,13 +175,13 @@ BOOL cancelCmd(int cmdKey)
 	sprintf(locBuf, "%d", NumCmds);
 	if (NumCmds == 0)
 	{
-	    fl_set_object_label(fd_ImpFeMain->QueueDisp, "");
+	    ui_set_text(fd_ImpFeMain->QueueDisp, "");
 	}
 	else
 	{
-	    fl_set_object_label(fd_ImpFeMain->QueueDisp, locBuf);
+	    ui_set_text(fd_ImpFeMain->QueueDisp, locBuf);
 	}
-	if (fl_form_is_visible(fd_CommandForm->CommandForm))
+	if (ui_window_visible(fd_CommandForm->CommandForm))
 	{
 		buildCmdList();
 	}
@@ -215,8 +214,8 @@ void runImmQueue(void)
 				/* Echo it? */
 				if (QueueEcho)
 				{
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, "[QUE] ");
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser,
+					ui_browser_append(fd_ImpFeMain->MainBrowser, "[QUE] ");
+					ui_browser_append(fd_ImpFeMain->MainBrowser,
 										   CmdArray[tmp].cmdbuf);
 				}
 				write_str(CmdArray[tmp].cmdbuf);
@@ -225,13 +224,13 @@ void runImmQueue(void)
 				sprintf(locBuf, "%d", NumCmds);
 				if (NumCmds == 0)
 				{
-	    			    fl_set_object_label(fd_ImpFeMain->QueueDisp, "");
+	    			    ui_set_text(fd_ImpFeMain->QueueDisp, "");
 				}
 				else
 				{
-	    			    fl_set_object_label(fd_ImpFeMain->QueueDisp, locBuf);
+	    			    ui_set_text(fd_ImpFeMain->QueueDisp, locBuf);
 				}
-				if (fl_form_is_visible(fd_CommandForm->CommandForm))
+				if (ui_window_visible(fd_CommandForm->CommandForm))
 				{
 					buildCmdList();
 				}
@@ -245,19 +244,23 @@ void runImmQueue(void)
 }
 
 /*
- * runQueue_cb - This function is called as a callback via the Xforms library
- *               after 30 secs of idleness
+ * runQueue_cb - This function is called from the GLib main loop
+ *               every 20 seconds to run the queued commands
  */
-void runQueue_cb(int val, void *unused)
+static gboolean runQueue_cb(gpointer unused)
 {
     runCmdQueue();
-    (void) fl_add_timeout(20000, runQueue_cb, NULL);
+    return(G_SOURCE_CONTINUE);
 }
 
-void runImmQueue_cb(int val, void *unused)
+/*
+ * runImmQueue_cb - called every 5 seconds to send any immediate
+ *                  commands that had to wait for the main prompt
+ */
+static gboolean runImmQueue_cb(gpointer unused)
 {
     runImmQueue();
-    (void) fl_add_timeout(5000, runImmQueue_cb, NULL);
+    return(G_SOURCE_CONTINUE);
 }
 
 /*
@@ -282,8 +285,8 @@ void initCmdQueues(void)
 	{
 		QueueOk=TRUE;
 		bzero(CmdArray, MAX_CMDS * sizeof(Cmd_t));
-		(void) fl_add_timeout(20000, runQueue_cb, NULL);
-		(void) fl_add_timeout(5000, runImmQueue_cb, NULL);
+		(void) g_timeout_add(20000, runQueue_cb, NULL);
+		(void) g_timeout_add(5000, runImmQueue_cb, NULL);
 	}
 }
 
@@ -327,8 +330,8 @@ void runCmdQueue(void)
 				/* Echo it? */
 				if (QueueEcho)
 				{
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, "[QUE] ");
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser,
+					ui_browser_append(fd_ImpFeMain->MainBrowser, "[QUE] ");
+					ui_browser_append(fd_ImpFeMain->MainBrowser,
 										   CmdArray[tmp].cmdbuf);
 				}
 				write_str(CmdArray[tmp].cmdbuf);
@@ -337,13 +340,13 @@ void runCmdQueue(void)
 				sprintf(locBuf, "%d", NumCmds);
 				if (NumCmds == 0)
 				{
-	    			    fl_set_object_label(fd_ImpFeMain->QueueDisp, "");
+	    			    ui_set_text(fd_ImpFeMain->QueueDisp, "");
 				}
 				else
 				{
-	    			    fl_set_object_label(fd_ImpFeMain->QueueDisp, locBuf);
+	    			    ui_set_text(fd_ImpFeMain->QueueDisp, locBuf);
 				}
-				if (fl_form_is_visible(fd_CommandForm->CommandForm))
+				if (ui_window_visible(fd_CommandForm->CommandForm))
 				{
 					buildCmdList();
 				}
@@ -371,8 +374,8 @@ void runCmdQueue(void)
 		/* Echo it? */
 		if (QueueEcho)
 		{
-			fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, "[QUE] ");
-			fl_addto_browser_chars(fd_ImpFeMain->MainBrowser,
+			ui_browser_append(fd_ImpFeMain->MainBrowser, "[QUE] ");
+			ui_browser_append(fd_ImpFeMain->MainBrowser,
 								   CmdArray[fMed].cmdbuf);
 		}
 		write_str(CmdArray[fMed].cmdbuf);
@@ -381,13 +384,13 @@ void runCmdQueue(void)
 		sprintf(locBuf, "%d", NumCmds);
 		if (NumCmds == 0)
 		{
-	    	    fl_set_object_label(fd_ImpFeMain->QueueDisp, "");
+	    	    ui_set_text(fd_ImpFeMain->QueueDisp, "");
 		}
 		else
 		{
-	    	    fl_set_object_label(fd_ImpFeMain->QueueDisp, locBuf);
+	    	    ui_set_text(fd_ImpFeMain->QueueDisp, locBuf);
 		}
-		if (fl_form_is_visible(fd_CommandForm->CommandForm))
+		if (ui_window_visible(fd_CommandForm->CommandForm))
 		{
 			buildCmdList();
 		}
@@ -398,8 +401,8 @@ void runCmdQueue(void)
 		/* Echo it? */
 		if (QueueEcho)
 		{
-			fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, "[QUE] ");
-			fl_addto_browser_chars(fd_ImpFeMain->MainBrowser,
+			ui_browser_append(fd_ImpFeMain->MainBrowser, "[QUE] ");
+			ui_browser_append(fd_ImpFeMain->MainBrowser,
 								   CmdArray[fLow].cmdbuf);
 		}
 		write_str(CmdArray[fLow].cmdbuf);
@@ -408,13 +411,13 @@ void runCmdQueue(void)
 		sprintf(locBuf, "%d", NumCmds);
 		if (NumCmds == 0)
 		{
-	    	    fl_set_object_label(fd_ImpFeMain->QueueDisp, "");
+	    	    ui_set_text(fd_ImpFeMain->QueueDisp, "");
 		}
 		else
 		{
-	    	    fl_set_object_label(fd_ImpFeMain->QueueDisp, locBuf);
+	    	    ui_set_text(fd_ImpFeMain->QueueDisp, locBuf);
 		}
-		if (fl_form_is_visible(fd_CommandForm->CommandForm))
+		if (ui_window_visible(fd_CommandForm->CommandForm))
 		{
 			buildCmdList();
 		}
@@ -525,10 +528,8 @@ void buildCmdList(void)
 	int tmp, len, pos;
 	char lineBuf[95], cmnd[35];
 
-	/* Speed up output */
-	fl_freeze_form(fd_CommandForm->CommandForm);
 	/* Clear the existing contents, if any */
-	fl_clear_browser(fd_CommandForm->CmdsBrowser);
+	ui_browser_clear(fd_CommandForm->CmdsBrowser);
 	if (NumCmds != 0)
 	{
 		/* Loop for each possible command */
@@ -568,12 +569,11 @@ void buildCmdList(void)
 								CmdArray[tmp].pri);
 						break;
 				}
-				fl_add_browser_line(fd_CommandForm->CmdsBrowser,
+				ui_browser_add_line(fd_CommandForm->CmdsBrowser,
 									lineBuf);
 			}
 		}
 	}
-	fl_unfreeze_form(fd_CommandForm->CommandForm);
 }
 
 /*

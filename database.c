@@ -53,7 +53,6 @@ static char rcsid[]="$Id: database.c,v 1.2 2000/05/17 22:51:46 marisa Exp $";
 #else
 #include <strings.h>
 #endif
-#include "forms.h"
 #include "impfe.h"
 #include "ImpFeGui.h"
 #include "ImpFeMess.h"
@@ -131,8 +130,8 @@ BOOL openFeDBs(BOOL createIt)
 
 	/* Pull selections out of file selector buffer */
 	bzero(locBuf, 4096 * sizeof(char));
-	strcpy(BaseDir, fl_get_directory());
-	strcpy(BaseFile, fl_get_filename());
+	strcpy(BaseDir, ui_last_directory());
+	strcpy(BaseFile, ui_last_filename());
 	/* Get the file name without an extension */
 	noExt(RawFile, BaseFile);
 	/* Build the rest of the names */
@@ -220,14 +219,14 @@ BOOL openFeDBs(BOOL createIt)
 			fe_puts("*** Unable to create the bitmap sectors database!\n");
 			return(FALSE);
 		}
-		fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, ">>> Creating the sectors-bitmap database - this may take a while...\n");
+		ui_browser_append(fd_ImpFeMain->MainBrowser, ">>> Creating the sectors-bitmap database - this may take a while...\n");
 		/* Create the file length */
 		for (tmp=0; tmp < (sizeof(FeBitmap_t) / 4096) + 1; tmp++)
 		{
 		    write(BitmapFileHndl, locBuf, 4096 * sizeof(char));
 		}
 		lseek(BitmapFileHndl, 0, SEEK_SET);
-		fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, ">>> sectors-bitmap database created\n");
+		ui_browser_append(fd_ImpFeMain->MainBrowser, ">>> sectors-bitmap database created\n");
 		if ((BitMap=mmap(NULL, sizeof(FeBitmap_t),
 						 PROT_READ|PROT_WRITE, MAP_SHARED, BitmapFileHndl,
 						 0)) ==  (FeBitmap_t *)-1)
@@ -296,7 +295,7 @@ BOOL openFeDBs(BOOL createIt)
 		bzero(&tmpRace, sizeof(Race_t));
 		tmpPlayer.status=ps_notseen;
 		tmpPlayer.relation=relation_default;
-		fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, ">>> Creating players database\n");
+		ui_browser_append(fd_ImpFeMain->MainBrowser, ">>> Creating players database\n");
 		for (tmp=0; tmp < PLAYER_MAX; tmp++)
 		{
 		    tmpPlayer.number=tmp;
@@ -309,7 +308,7 @@ BOOL openFeDBs(BOOL createIt)
 		    }
 		}
 		tmpRace.relation=relation_default;
-		fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, ">>> Creating races database\n");
+		ui_browser_append(fd_ImpFeMain->MainBrowser, ">>> Creating races database\n");
 		for (tmp=0; tmp < RACE_MAX; tmp++)
 		{
 		    Race[tmp] = tmpRace;
@@ -320,7 +319,7 @@ BOOL openFeDBs(BOOL createIt)
 				tmp=RACE_MAX;
 		    }
 		}
-		fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, ">>> All database created\n");
+		ui_browser_append(fd_ImpFeMain->MainBrowser, ">>> All database created\n");
 	}
 	else
 	{

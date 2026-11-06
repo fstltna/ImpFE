@@ -7,7 +7,6 @@ static char rcsid[]="$Id: impcon.c,v 1.2 2000/05/24 21:51:39 marisa Exp $";
 
 #include "config.h"
 #include <sys/types.h>
-#include <rpc/types.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -20,18 +19,15 @@ static char rcsid[]="$Id: impcon.c,v 1.2 2000/05/24 21:51:39 marisa Exp $";
 #include <sys/wait.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#ifdef I_STRING
 #include <string.h>
-#else
 #include <strings.h>
-#endif
 #include <ctype.h>
-#include "forms.h"
+#include <stdlib.h>
 #include "impfe.h"
 #include "ImpFeGui.h"
 #include "gui.h"
 
-static unsigned int MyCond=FL_READ;
+static guint ServWatch=0;	/* GLib watch on the game socket */
 static BOOL DoingLogin=FALSE;
 static BOOL LoseNextChar=FALSE;
 
@@ -69,7 +65,7 @@ int call_socket(char *hostname, int portnum)
 	{
 		return(-1);
 	}
-	if (connect(s, &sa, sizeof(sa)) < 0)
+	if (connect(s, (struct sockaddr *) &sa, sizeof(sa)) < 0)
 	{
 		close(s);
 		return(-1);
@@ -140,17 +136,40 @@ int read_data(int sock, char *buf, int len)
 
 #define SERV_BUF_LEN	2048
 static char ServBuf[SERV_BUF_LEN+1];
-void handleServInp(int socket, void *data)
+/*
+ * stopServWatch - stops watching the game socket for input
+ */
+static void stopServWatch(void)
+{
+	if (ServWatch != 0)
+	{
+		g_source_remove(ServWatch);
+		ServWatch=0;
+	}
+}
+
+/*
+ * handleServInp - called from the main loop when the game socket has
+ *                 something for us. Returns FALSE once the connection
+ *                 has gone, which removes the watch.
+ */
+static gboolean handleServInp(GIOChannel *chan, GIOCondition cond, gpointer data)
 {
 	int br;
 	char locBuf[]="\0\0";
 
-	if ((br=read(socket, &locBuf[0], 1)) == 1)
+	if ((br=read(GameSocket, &locBuf[0], 1)) == 1)
 	{
 		if (LoseNextChar)
 		{
 			LoseNextChar=FALSE;
-			return;
+			return(TRUE);
+		}
+		/* Don't overrun the buffer on absurdly long lines */
+		if (strlen(ServBuf) >= SERV_BUF_LEN)
+		{
+			fe_parse(ServBuf);
+			ServBuf[0]='\0';
 		}
 		strcat(&ServBuf[0], &locBuf[0]);
 		/* Check for Newline */
@@ -167,7 +186,7 @@ void handleServInp(int socket, void *data)
 				if ((locBuf[0] == ':') && (ServBuf[0] == ':') &&
 					(ServBuf[1] != '\0'))
 				{
-					fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, ServBuf);
+					ui_browser_append(fd_ImpFeMain->MainBrowser, ServBuf);
 					if (strcmp(ServBuf, ":Enter player name:") == 0)
 					{
 						LoseNextChar=TRUE;
@@ -176,9 +195,9 @@ void handleServInp(int socket, void *data)
 							write_str("!");
 							write_str(game_player);
 							write_str("\n");
-							fl_addto_browser_chars(fd_ImpFeMain->MainBrowser,
+							ui_browser_append(fd_ImpFeMain->MainBrowser,
 												   game_player);
-							fl_addto_browser_chars(fd_ImpFeMain->MainBrowser,
+							ui_browser_append(fd_ImpFeMain->MainBrowser,
 												   "\n");
 						}
 					}
@@ -189,10 +208,9 @@ void handleServInp(int socket, void *data)
 						{
 							write_str(game_player_pswd);
 							write_str("\n");
-							fl_addto_browser_chars(fd_ImpFeMain->MainBrowser,
-												   game_player_pswd);
-							fl_addto_browser_chars(fd_ImpFeMain->MainBrowser,
-												   "\n");
+							/* Don't echo the password itself */
+							ui_browser_append(fd_ImpFeMain->MainBrowser,
+												   "********\n");
 						}
 						DoingLogin=FALSE;
 					}
@@ -203,19 +221,22 @@ void handleServInp(int socket, void *data)
 	}
 	else
 	{
-		/* Remove the callback */
-		fl_remove_io_callback(GameSocket, MyCond, handleServInp);
+		/* The watch is removed when we return FALSE */
+		ServWatch=0;
 		/* Close the socket */
 		close(GameSocket);
 		GameSocket=-1;
-		fl_set_menu_item_mode(fd_ImpFeMain->MainServerMenu,
-							  MAIN_SERVER_MENU_CLOSE, FL_PUP_GREY);
-		fl_set_menu_item_mode(fd_ImpFeMain->MainServerMenu,
-							  MAIN_SERVER_MENU_OPEN, FL_PUP_NONE);
-		fl_set_object_label(fd_ImpFeMain->StatusBox, "Offline");
+		ServBuf[0]='\0';
+		ui_menu_enable(fd_ImpFeMain->MainServerMenu,
+							  MAIN_SERVER_MENU_CLOSE, FALSE);
+		ui_menu_enable(fd_ImpFeMain->MainServerMenu,
+							  MAIN_SERVER_MENU_OPEN, TRUE);
+		ui_set_text(fd_ImpFeMain->StatusBox, "Offline");
 		fe_puts("*** Connection to server terminated...\n");
 		AtMainPrompt=FALSE;
+		return(FALSE);
 	}
+	return(TRUE);
 }
 
 /*
@@ -230,20 +251,21 @@ BOOL cmd_connect(BOOL kill_it)
 		if (GameSocket != -1)
 		{
 			/* Remove the callback */
-			fl_remove_io_callback(GameSocket, MyCond, handleServInp);
+			stopServWatch();
 			/* Close the socket */
 			close(GameSocket);
 			GameSocket=-1;
+			ServBuf[0]='\0';
 			fe_puts("*** Connection to server closed\n");
 		        AtMainPrompt=FALSE;
 		}
 		return(TRUE);
 	}
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, "*** Attempting to connect to ");
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, game_host);
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, ", port ");
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, game_port);
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, "\n");
+	ui_browser_append(fd_ImpFeMain->MainBrowser, "*** Attempting to connect to ");
+	ui_browser_append(fd_ImpFeMain->MainBrowser, game_host);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, ", port ");
+	ui_browser_append(fd_ImpFeMain->MainBrowser, game_port);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, "\n");
 	if ((GameSocket=call_socket(game_host, atoi(game_port))) == -1)
 	{
 		fe_puts("**** Connection failed\n");
@@ -251,7 +273,15 @@ BOOL cmd_connect(BOOL kill_it)
 		return(FALSE);
 	}
 	/* Add in the callback for the socket */
-	fl_add_io_callback(GameSocket, MyCond, handleServInp, NULL);
+	{
+		GIOChannel *chan = g_io_channel_unix_new(GameSocket);
+
+		ServWatch = g_io_add_watch(chan, G_IO_IN | G_IO_HUP | G_IO_ERR,
+			handleServInp, NULL);
+		g_io_channel_unref(chan);
+	}
+	ServBuf[0]='\0';
+	LoseNextChar=FALSE;
 	DoingLogin=TRUE;
 	return(TRUE);
 }

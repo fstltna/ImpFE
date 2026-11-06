@@ -53,7 +53,6 @@
  */
 
 #include "config.h"
-#include "forms.h"
 #include "ImpFeGui.h"
 #include "gui.h"
 #include "impfe.h"
@@ -61,85 +60,51 @@
 
 static char OutBuf[2048];
 
-/*
- * close_form - generic call-back for closing a form
- */
-int close_form(/*@unused@*/FL_FORM *form, /*@unused@*/void *unused)
-{
-	/*fl_hide_form(form);*/
-	return(FL_OK);
-}
-
 /* callbacks for form ImpFeMain */
-void MainInputBox_cb(FL_OBJECT *ob, long data)
+
+/*
+ * MainInputBox_cb - called when the user presses Enter in the input
+ *                   line; sends the line on to the server
+ */
+void MainInputBox_cb(GtkWidget *w, /*@unused@*/gpointer data)
 {
-	/* If flag is 0 (not from HdnBtn) just return */
-	if (data == 0)
-	{
-		return;
-	}
 	/* Copy out what they typed */
-	strcpy(OutBuf, fl_get_input(ob));
+	g_strlcpy(OutBuf, ui_entry_get(fd_ImpFeMain->MainInputBox), sizeof(OutBuf));
 	/* Clear the input box */
-	fl_set_input(ob, "");
+	ui_entry_set(fd_ImpFeMain->MainInputBox, "");
 	/* Send it on to the server */
 	if (GameSocket != -1)
 	{
 		(void) write_data(GameSocket, OutBuf, (int) strlen(OutBuf));
 		(void) write_data(GameSocket, "\n", 1);
 	}
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, OutBuf);
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, "\n");
+	ui_browser_append(fd_ImpFeMain->MainBrowser, OutBuf);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, "\n");
 }
 
-void HdnRtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void MainHelpMenu_cb(/*@unused@*/GtkWidget *menu, int item)
 {
-    /* Just pass this on... */
-    MainInputBox_cb(fd_ImpFeMain->MainInputBox, 1);
-}
-
-void MainHelpMenu_cb(FL_OBJECT *ob, /*@unused@*/long data)
-{
-	static int item;
-
-	item = fl_get_menu(ob);
 	switch(item)
 	{
 	    case MAIN_HELP_MENU_ABOUT:
-			fl_set_object_label(fd_ImpFeAbout->ImpVer, "ImpFE v" FE_VER "." FE_REV "." FE_PATCH);
-			fl_set_object_label(fd_ImpFeAbout->MainAboutText,
+			ui_set_text(fd_ImpFeAbout->ImpVer, "ImpFE v" FE_VER "." FE_REV "." FE_PATCH);
+			ui_set_text(fd_ImpFeAbout->MainAboutText,
 								"(C) 1997-2021 Marisa Giancarla\n\n"
 								"For more information contact <fstltna@yahoo.com>\n"
 								"or go to the Imperium home page at:\n"
 								"<https://EmpireDirectory.net>");
-			(void) fl_set_form_atclose(fd_ImpFeAbout->ImpFeAbout, close_form,
-								&item);
-			(void) fl_show_form(fd_ImpFeAbout->ImpFeAbout, FL_PLACE_SIZE,
-						 FL_TRANSIENT, "About ImpFE");
+			ui_window_show(fd_ImpFeAbout->ImpFeAbout);
 			break;
 	    case MAIN_HELP_MENU_INDEX:
-			cb_help_button(ob, CHAPTER_START);
+			cb_help_button(CHAPTER_START);
 			break;
 	    default:
 			break;
 	}
 }
 
-void PrivMsgBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void MainFileMenu_cb(/*@unused@*/GtkWidget *menu, int item)
 {
-  /* fill-in code for callback */
-}
-
-void StatusBox_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
-{
-  /* fill-in code for callback */
-}
-
-void MainFileMenu_cb(FL_OBJECT *ob, /*@unused@*/long data)
-{
-	int item;
-
-	item = fl_get_menu(ob);
 	switch(item)
 	{
 	    case MAIN_FILE_MENU_OPEN:
@@ -156,44 +121,31 @@ void MainFileMenu_cb(FL_OBJECT *ob, /*@unused@*/long data)
 			handleNewCfg();
 			break;
 	    case MAIN_FILE_MENU_EXIT:
-			(void) cmd_connect(TRUE);
-			handleSaveCfg();
-			handleCloseCfg();
-			freeCmdQueues();
-			impfeCleanup();
-			fl_finish();
-			exit(0);
-			/*@notreached@*/ break; /* Never get here */
+			impfeQuit();
+			break;
 	    default:
 			break;
 	}
 }
 
-void MainServerMenu_cb(FL_OBJECT *ob, /*@unused@*/long data)
+void MainServerMenu_cb(GtkWidget *menu, int item)
 {
-	int item;
-
-	item = fl_get_menu(ob);
 	switch(item)
 	{
 	    case MAIN_SERVER_MENU_OPEN:
 			if (cmd_connect(FALSE))
 			{
-				fl_set_menu_item_mode(ob,
-									  MAIN_SERVER_MENU_OPEN, FL_PUP_GREY);
-				fl_set_menu_item_mode(ob,
-									  MAIN_SERVER_MENU_CLOSE, FL_PUP_NONE);
-				fl_set_object_label(fd_ImpFeMain->StatusBox, "CONNECTED");
+				ui_menu_enable(menu, MAIN_SERVER_MENU_OPEN, FALSE);
+				ui_menu_enable(menu, MAIN_SERVER_MENU_CLOSE, TRUE);
+				ui_set_text(fd_ImpFeMain->StatusBox, "CONNECTED");
 			}
 			break;
 	    case MAIN_SERVER_MENU_CLOSE:
 			if (cmd_connect(TRUE))
 			{
-				fl_set_menu_item_mode(ob,
-									  MAIN_SERVER_MENU_CLOSE, FL_PUP_GREY);
-				fl_set_menu_item_mode(ob,
-									  MAIN_SERVER_MENU_OPEN, FL_PUP_NONE);
-				fl_set_object_label(fd_ImpFeMain->StatusBox, "Offline");
+				ui_menu_enable(menu, MAIN_SERVER_MENU_CLOSE, FALSE);
+				ui_menu_enable(menu, MAIN_SERVER_MENU_OPEN, TRUE);
+				ui_set_text(fd_ImpFeMain->StatusBox, "Offline");
 			}
 			break;
 	    default:
@@ -201,95 +153,52 @@ void MainServerMenu_cb(FL_OBJECT *ob, /*@unused@*/long data)
 	}
 }
 
-void PrivMsgWho_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void MainViewMenu_cb(/*@unused@*/GtkWidget *menu, int item)
 {
-  /* fill-in code for callback */
-}
-
-void MainViewMenu_cb(FL_OBJECT *ob, /*@unused@*/long data)
-{
-	static int item;
-
-	item = fl_get_menu(ob);
 	switch(item)
 	{
 	    case MAIN_VIEW_MENU_MAP:
-			(void) fl_set_form_atclose(fd_MapForm->MapForm, close_form,
-								&item);
 			buildMapDisp();
-			(void) fl_show_form(fd_MapForm->MapForm, FL_PLACE_SIZE,
-				FL_FULLBORDER, "ImpFE Map Display");
+			ui_window_show(fd_MapForm->MapForm);
 			break;
 		case MAIN_VIEW_MENU_SHIP:
-			(void) fl_set_form_atclose(fd_ShipCensusForm->ShipCensusForm, close_form,
-								&item);
 			buildShCensus();
-			(void) fl_show_form(fd_ShipCensusForm->ShipCensusForm, FL_PLACE_SIZE,
-				FL_FULLBORDER, "Ship Census");
+			ui_window_show(fd_ShipCensusForm->ShipCensusForm);
 			break;
 		case MAIN_VIEW_MENU_PLANET:
-			(void) fl_set_form_atclose(fd_PlanetCensusForm->PlanetCensusForm, close_form,
-								&item);
 			buildPlCensus();
-			(void) fl_show_form(fd_PlanetCensusForm->PlanetCensusForm, FL_PLACE_SIZE,
-				FL_FULLBORDER, "Planet Census");
+			ui_window_show(fd_PlanetCensusForm->PlanetCensusForm);
 			break;
 		case MAIN_VIEW_MENU_CMDS:
-			(void) fl_set_form_atclose(fd_CommandForm->CommandForm, close_form,
-								&item);
 			buildCmdList();
-			(void) fl_show_form(fd_CommandForm->CommandForm, FL_PLACE_SIZE,
-				FL_FULLBORDER, "Queued Commands");
+			ui_window_show(fd_CommandForm->CommandForm);
 			break;
 	    case MAIN_VIEW_MENU_CLEAR:
-			fl_clear_browser(fd_ImpFeMain->MainBrowser);
+			ui_browser_clear(fd_ImpFeMain->MainBrowser);
 			break;
 	    default:
 			break;
 	}
 }
 
-void ServCfgCancelBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void ServCfgCancelBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
-	fl_activate_form(fd_ImpFeMain->ImpFeMain);
-	fl_hide_form(fd_ServCfgForm->ServCfgForm);
+	ui_window_hide(fd_ServCfgForm->ServCfgForm);
 }
 
-int close_cfg_form(/*@unused@*/FL_FORM *form, /*@unused@*/void *unused)
+void MainConfigMenu_cb(/*@unused@*/GtkWidget *menu, int item)
 {
-	fl_activate_form(fd_ImpFeMain->ImpFeMain);
-	/*fl_hide_form(form);*/
-	return(FL_OK);
-}
-
-
-void MainConfigMenu_cb(FL_OBJECT *ob, /*@unused@*/long data)
-{
-	static int item;
-
-	item = fl_get_menu(ob);
 	switch(item)
 	{
 	    case MAIN_CONFIG_MENU_HOST:
-			/* Set up the exit handler */
-			(void) fl_set_form_atclose(fd_ServCfgForm->ServCfgForm, close_cfg_form,
-								&item);
-			/*fl_set_form_atclose(fd_ServCfgForm->ServCfgForm, close_form,
-			  &item);*/
 			/* Load in current values */
-			fl_set_input(fd_ServCfgForm->ServName,
-						 game_host);
-			fl_set_input(fd_ServCfgForm->ServPort,
-						 game_port);
-			fl_set_input(fd_ServCfgForm->PlayerName,
-						 game_player);
-			fl_set_input(fd_ServCfgForm->PlayerPswd,
-						 game_player_pswd);
-			fl_set_input(fd_ServCfgForm->GameDesc,
-						 game_desc);
-			(void) fl_show_form(fd_ServCfgForm->ServCfgForm, FL_PLACE_SIZE,
-						 FL_FULLBORDER, "ImpFE Host Config");
-			fl_deactivate_form(fd_ImpFeMain->ImpFeMain);
+			ui_entry_set(fd_ServCfgForm->ServName, game_host);
+			ui_entry_set(fd_ServCfgForm->ServPort, game_port);
+			ui_entry_set(fd_ServCfgForm->PlayerName, game_player);
+			ui_entry_set(fd_ServCfgForm->PlayerPswd, game_player_pswd);
+			ui_entry_set(fd_ServCfgForm->GameDesc, game_desc);
+			/* The window is modal, so the main window waits for it */
+			ui_window_show(fd_ServCfgForm->ServCfgForm);
 			break;
 	    default:
 			break;
@@ -297,40 +206,48 @@ void MainConfigMenu_cb(FL_OBJECT *ob, /*@unused@*/long data)
 }
 
 /* callbacks for form ImpFeAbout */
-void AboutOk_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void AboutOk_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
-	fl_hide_form(fd_ImpFeAbout->ImpFeAbout);
+	ui_window_hide(fd_ImpFeAbout->ImpFeAbout);
 }
 
-
-
 /* callbacks for form MapForm */
-/* This lets the user click on a sector to get additional info */
-void MB_cb(/*@unused@*/FL_OBJECT *ob, long data)
+
+/*
+ * showPlanetDetail - pulls up a planet in the detailed planet window
+ */
+static void showPlanetDetail(ULONG plNum)
 {
-	static int item;
+	LastPlanet=plNum;
+	buildPlDetDisp();
+	ui_window_show(fd_PlanetDetailForm->PlanetDetailForm);
+}
+
+/* This lets the user click on a sector to get additional info */
+gboolean MB_cb(/*@unused@*/GtkWidget *w, GdkEventButton *ev, gpointer data)
+{
 	ULONG tmp;
 	USHORT row, col;
-	int button;
+	int code;
 
 	/* data holds the code for the tile they clicked */
-	if (data == 0)
+	code = GPOINTER_TO_INT(data);
+	if ((code == 0) || (ev->type != GDK_BUTTON_PRESS) || (BitMap == NULL))
 	{
-		return;
+		return(FALSE);
 	}
-	data--;
-	row = (USHORT) data / 10;
-	col = (USHORT) data % 10;
+	code--;
+	row = (USHORT) code / 10;
+	col = (USHORT) code % 10;
 #ifdef DEBUG
 printf("Row = %u, col = %u\n", row, col);
 #endif
 	/* See which mouse button they clicked */
-	button = (int) fl_mouse_button();
-	switch(button)
+	switch(ev->button)
 	{
-		case FL_LEFT_MOUSE:
+		case UI_LEFT_MOUSE:
 			break;
-		case FL_MIDDLE_MOUSE:
+		case UI_MIDDLE_MOUSE:
 #ifdef DEBUG
 printf("Middle pressed\n");
 #endif
@@ -340,30 +257,23 @@ printf("Middle pressed\n");
 #ifdef DEBUG
 printf("Selecting planet %u\n", tmp);
 #endif
-				/* Pull up planet in detailed planet display window */
-				(void) fl_set_form_atclose(fd_PlanetDetailForm->PlanetDetailForm, close_form,
-									&item);
-				LastPlanet=tmp;
-				buildPlDetDisp();
-				(void) fl_show_form(fd_PlanetDetailForm->PlanetDetailForm,
-							 FL_PLACE_SIZE, FL_FULLBORDER,
-							 "Detailed Planet Information");
+				showPlanetDetail(tmp);
 			}
 			break;
-		case FL_RIGHT_MOUSE:
+		case UI_RIGHT_MOUSE:
 			break;
 		default:
 			break;
 	}
+	return(TRUE);
 }
 
-void JmpBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void JmpBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	int row, col;
 
-  /* fill-in code for callback */ /*@ignore@*/
-	row=atoi(fl_get_input(fd_MapForm->JmRow));
-	col=atoi(fl_get_input(fd_MapForm->JmCol)); /*@end@*/
+	row=atoi(ui_entry_get(fd_MapForm->JmRow));
+	col=atoi(ui_entry_get(fd_MapForm->JmCol));
     if (row > ((game_sizey * 10) - 7))
 	{
 		row = (game_sizey * 10) - 7;
@@ -389,16 +299,17 @@ void JmpBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
 	}
 }
 
-void DirBtn_cb(/*@unused@*/FL_OBJECT *ob, long data)
+void DirBtn_cb(/*@unused@*/GtkWidget *w, gpointer data)
 {
     int mult=1;
+    long code = (long) GPOINTER_TO_INT(data);
 
-    if (data > 9)
+    if (code > 9)
     {
 	mult=10;
-	data /= 10;
+	code /= 10;
     }
-    switch(data)
+    switch(code)
     {
 	case 1:
 	    scrollFeMap(-1 * mult, 1 * mult);
@@ -439,101 +350,41 @@ void DirBtn_cb(/*@unused@*/FL_OBJECT *ob, long data)
 	    break;
 	default:
 	    fprintf(stderr, "*** Unknown directional button value %ld\n",
-		data);
+		code);
 	    break;
     }
 }
 
-void MapHelpMenu_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void MapOk_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
-  /* fill-in code for callback */
+	ui_window_hide(fd_MapForm->MapForm);
 }
-
-void MapFileMenu_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
-{
-  /* fill-in code for callback */
-}
-
-void SmMapCanvas_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
-{
-  /* fill-in code for callback */
-}
-
-void MapOk_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
-{
-	fl_hide_form(fd_MapForm->MapForm);
-}
-
-
 
 /* callbacks for form TasksForm */
-void TasksFileMenu_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void TasksUpdtBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
   /* fill-in code for callback */
 }
 
-void TasksHelpMenu_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void TasksKillBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
   /* fill-in code for callback */
 }
 
-void TasksTasksMenu_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void TasksDoneBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
-  /* fill-in code for callback */
+	ui_window_hide(fd_TasksForm->TasksForm);
 }
-
-void TasksUpdtBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
-{
-  /* fill-in code for callback */
-}
-
-void TasksKillBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
-{
-  /* fill-in code for callback */
-}
-
-void TasksDoneBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
-{
-  /* fill-in code for callback */
-}
-
-
 
 /* callbacks for form ServCfgForm */
-void ServName_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void ServCfgOkBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
-  /* fill-in code for callback */
-}
-
-void ServPort_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
-{
-  /* fill-in code for callback */
-}
-
-void PlayerName_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
-{
-  /* fill-in code for callback */
-}
-
-void PlayerPswd_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
-{
-  /* fill-in code for callback */
-}
-
-void GameDesc_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
-{
-  /* fill-in code for callback */
-}
-
-void ServCfgOkBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
-{
-	strcpy(game_host, fl_get_input(fd_ServCfgForm->ServName));
-	strcpy(game_port, fl_get_input(fd_ServCfgForm->ServPort));
-	strcpy(game_player, fl_get_input(fd_ServCfgForm->PlayerName));
-	strcpy(game_player_pswd, fl_get_input(fd_ServCfgForm->PlayerPswd));
-	strcpy(game_desc, fl_get_input(fd_ServCfgForm->GameDesc));
-	fl_activate_form(fd_ImpFeMain->ImpFeMain);
-	fl_hide_form(fd_ServCfgForm->ServCfgForm);
+	g_strlcpy(game_host, ui_entry_get(fd_ServCfgForm->ServName), sizeof(game_host));
+	g_strlcpy(game_port, ui_entry_get(fd_ServCfgForm->ServPort), sizeof(game_port));
+	g_strlcpy(game_player, ui_entry_get(fd_ServCfgForm->PlayerName), sizeof(game_player));
+	g_strlcpy(game_player_pswd, ui_entry_get(fd_ServCfgForm->PlayerPswd), sizeof(game_player_pswd));
+	g_strlcpy(game_desc, ui_entry_get(fd_ServCfgForm->GameDesc), sizeof(game_desc));
+	ui_window_hide(fd_ServCfgForm->ServCfgForm);
 }
 
 /*
@@ -545,140 +396,127 @@ void addToInput(const char *str, BOOL NL)
 {
 	char work[1024];
 
-	strcpy(work, fl_get_input(fd_ImpFeMain->MainInputBox));
-	strcat(work, str);
+	g_strlcpy(work, ui_entry_get(fd_ImpFeMain->MainInputBox), sizeof(work));
+	g_strlcat(work, str, sizeof(work));
 	work[256]='\0';
-	fl_set_input(fd_ImpFeMain->MainInputBox, work);
+	ui_entry_set(fd_ImpFeMain->MainInputBox, work);
+	gtk_editable_set_position(GTK_EDITABLE(fd_ImpFeMain->MainInputBox), -1);
 	if (NL)
 	{
-		MainInputBox_cb(fd_ImpFeMain->MainInputBox, 1);
+		MainInputBox_cb(fd_ImpFeMain->MainInputBox, GINT_TO_POINTER(1));
 	}
+}
+
+/*
+ * censusNumber - pulls the ship/planet/item number from the start of a
+ *                browser line, returning it in lBuff with a leading space
+ */
+static ULONG censusNumber(GtkWidget *browser, int line, char *lBuff, size_t len)
+{
+	ULONG num;
+
+	g_strlcpy(lBuff, ui_browser_line(browser, line), len);
+	if (len > 9)
+	{
+		lBuff[9]='\0';
+	}
+	num=(ULONG) atol(lBuff);
+	/* Put it back in the buffer to chop off leading space */
+	g_snprintf(lBuff, len, " %lu", num);
+	return(num);
 }
 
 /* callbacks for form ShipCensusForm */
 /* ShBrowse_cb - called when the user clicks on one of the ships in the
  *               census window
  */
-void ShBrowse_cb(FL_OBJECT *ob, /*@unused@*/long data)
+void ShBrowse_cb(GtkWidget *browser, int line, int button)
 {
-	static int item;
 	ULONG shNum;
-	int line, button;
 	char lBuff[85];
 
-	/* See which mouse button they clicked */
-	button = (int) fl_mouse_button();
-	/* Get the line # they clicked on */
-	line = fl_get_browser(ob);
-	/* Copy out the contents of the line they clicked on */
-	strcpy(lBuff, fl_get_browser_line(ob, line));
-	lBuff[9]='\0';
-	/* Get the ship number */
-	shNum=(ULONG) atoi(lBuff);
-	/* Put it back in the buffer to chop off leading space */
-	sprintf(lBuff, " %lu", shNum);
+	/* Get the ship number from the line they clicked on */
+	shNum = censusNumber(browser, line, lBuff, sizeof(lBuff));
 
 	switch(button)
 	{
-		case FL_LEFT_MOUSE:
+		case UI_LEFT_MOUSE:
 			/* Add ship number to line */
 			addToInput(lBuff, FALSE);
 			break;
-		case FL_MIDDLE_MOUSE:
+		case UI_MIDDLE_MOUSE:
 			/* Add ship number to line, and send it */
 			addToInput(lBuff, TRUE);
 			break;
-		case FL_RIGHT_MOUSE:
+		case UI_RIGHT_MOUSE:
 			/* Pull up ship in detailed ship display window */
-			(void) fl_set_form_atclose(fd_ShipDetailForm->ShipDetailForm, close_form,
-								&item);
 			LastShip=shNum;
 			buildShDetDisp();
-			(void) fl_show_form(fd_ShipDetailForm->ShipDetailForm, FL_PLACE_SIZE,
-				FL_FULLBORDER, "Detailed Ship Information");
+			ui_window_show(fd_ShipDetailForm->ShipDetailForm);
 			break;
 		default:
 			break;
 	}
 }
 
-void ShCenUpdate_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void ShCenUpdate_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	buildShCensus();
 }
 
-void ShCenOk_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void ShCenOk_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
-	fl_hide_form(fd_ShipCensusForm->ShipCensusForm);
+	ui_window_hide(fd_ShipCensusForm->ShipCensusForm);
 }
-
 
 /* callbacks for form PlanetCensusForm */
 /* PlBrowse_cb - called when the user clicks on one of the planets in the
  *               census window
  */
-void PlBrowse_cb(FL_OBJECT *ob, /*@unused@*/long data)
+void PlBrowse_cb(GtkWidget *browser, int line, int button)
 {
-	static int item;
 	ULONG plNum;
-	int line, button;
 	char lBuff[120];
 
-	/* See which mouse button they clicked */
-	button = (int) fl_mouse_button();
-	/* Get the line # they clicked on */
-	line = fl_get_browser(ob);
-	/* Copy out the contents of the line they clicked on */
-	strcpy(lBuff, fl_get_browser_line(ob, line));
-	lBuff[9]='\0';
-	/* Get the planet number */
-	plNum=(ULONG) atoi(lBuff);
-	/* Put it back in the buffer to chop off leading space */
-	sprintf(lBuff, " %lu", plNum);
+	/* Get the planet number from the line they clicked on */
+	plNum = censusNumber(browser, line, lBuff, sizeof(lBuff));
 
 	switch(button)
 	{
-		case FL_LEFT_MOUSE:
+		case UI_LEFT_MOUSE:
 			/* Add planet number to line */
 			addToInput(lBuff, FALSE);
 			break;
-		case FL_MIDDLE_MOUSE:
+		case UI_MIDDLE_MOUSE:
 			/* Add planet number to line, and send it */
 			addToInput(lBuff, TRUE);
 			break;
-		case FL_RIGHT_MOUSE:
+		case UI_RIGHT_MOUSE:
 			/* Pull up planet in detailed planet display window */
-			(void) fl_set_form_atclose(fd_PlanetDetailForm->PlanetDetailForm, close_form,
-								&item);
-			LastPlanet=plNum;
-			buildPlDetDisp();
-			(void) fl_show_form(fd_PlanetDetailForm->PlanetDetailForm, FL_PLACE_SIZE,
-				FL_FULLBORDER, "Detailed Planet Information");
+			showPlanetDetail(plNum);
 			break;
 		default:
 			break;
 	}
 }
 
-void PlCenUpdate_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void PlCenUpdate_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	buildPlCensus();
 }
 
-void PlCenOk_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void PlCenOk_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
-	fl_hide_form(fd_PlanetCensusForm->PlanetCensusForm);
+	ui_window_hide(fd_PlanetCensusForm->PlanetCensusForm);
 }
 
-
-
 /* callbacks for form ShipDetailForm */
-void ShDetUpdBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void ShDetUpdBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	buildShDetDisp();
 }
 
-void ShDetStatBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void ShDetStatBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	char workBuf[256];
 
@@ -686,7 +524,7 @@ void ShDetStatBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
 	(void) addCmd(workBuf, QUE_IMMEDIATE);
 }
 
-void ShDetCargoBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void ShDetCargoBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	char workBuf[256];
 
@@ -694,7 +532,7 @@ void ShDetCargoBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
 	(void) addCmd(workBuf, QUE_IMMEDIATE);
 }
 
-void ShDetBigBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void ShDetBigBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	char workBuf[256];
 
@@ -706,26 +544,24 @@ void ShDetBigBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
  * ShDetActionBtn_cb - called when the user presses the install,
  *                     uninstall, or unload action buttons
  */
-void ShDetActionBtn_cb(/*@unused@*/FL_OBJECT *ob, long data)
+void ShDetActionBtn_cb(/*@unused@*/GtkWidget *w, gpointer data)
 {
 	int line;
 	ULONG itNum;
 	char lBuff[85];
 
-	/* Get the line # they clicked on */
-	line = fl_get_browser(fd_ShipDetailForm->ShDetItem);
+	/* Get the line # they selected */
+	line = ui_browser_selected(fd_ShipDetailForm->ShDetItem);
 	/* Make sure they have an item selected */
 	if (line == 0)
 	{
 		/* Nope */
 		return;
 	}
-	/* Copy out the contents of the line they clicked on */
-	strcpy(lBuff, fl_get_browser_line(fd_ShipDetailForm->ShDetItem, line));
-	lBuff[9]='\0';
 	/* Get the item number */
-	itNum = (ULONG) atoi(lBuff);
-	switch (data)
+	itNum = censusNumber(fd_ShipDetailForm->ShDetItem, line, lBuff,
+		sizeof(lBuff));
+	switch (GPOINTER_TO_INT(data))
 	{
 		case 1:
 			sprintf(lBuff, "install %lu %lu\n", LastShip, itNum);
@@ -745,29 +581,27 @@ void ShDetActionBtn_cb(/*@unused@*/FL_OBJECT *ob, long data)
 }
 
 /*
- * PlDetActionBtn_cb - called when the user presses the install,
- *                     uninstall, or unload action buttons
+ * PlDetActionBtn_cb - called when the user presses the refurbish
+ *                     action button
  */
-void PlDetActionBtn_cb(/*@unused@*/FL_OBJECT *ob, long data)
+void PlDetActionBtn_cb(/*@unused@*/GtkWidget *w, gpointer data)
 {
 	int line;
 	ULONG itNum;
 	char lBuff[85];
 
-	/* Get the line # they clicked on */
-	line = fl_get_browser(fd_PlanetDetailForm->PlDetItem);
+	/* Get the line # they selected */
+	line = ui_browser_selected(fd_PlanetDetailForm->PlDetItem);
 	/* Make sure they have an item selected */
 	if (line == 0)
 	{
 		/* Nope */
 		return;
 	}
-	/* Copy out the contents of the line they clicked on */
-	strcpy(lBuff, fl_get_browser_line(fd_PlanetDetailForm->PlDetItem, line));
-	lBuff[9]='\0';
 	/* Get the item number */
-	itNum = (ULONG) atoi(lBuff);
-	switch (data)
+	itNum = censusNumber(fd_PlanetDetailForm->PlDetItem, line, lBuff,
+		sizeof(lBuff));
+	switch (GPOINTER_TO_INT(data))
 	{
 		case 1:
 			sprintf(lBuff, "refurbish item %lu\n", itNum);
@@ -778,18 +612,18 @@ void PlDetActionBtn_cb(/*@unused@*/FL_OBJECT *ob, long data)
 	}
 }
 
-void ShDetOk_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void ShDetOk_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
-	fl_hide_form(fd_ShipDetailForm->ShipDetailForm);
+	ui_window_hide(fd_ShipDetailForm->ShipDetailForm);
 }
 
 /* callbacks for form PlanetDetailForm */
-void PlDetUpdBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void PlDetUpdBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	buildPlDetDisp();
 }
 
-void PlDetDumpBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void PlDetDumpBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	char workBuf[256];
 
@@ -797,7 +631,7 @@ void PlDetDumpBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
 	(void) addCmd(workBuf, QUE_IMMEDIATE);
 }
 
-void PlDetProdBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void PlDetProdBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	char workBuf[256];
 
@@ -805,7 +639,7 @@ void PlDetProdBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
 	(void) addCmd(workBuf, QUE_IMMEDIATE);
 }
 
-void PlDetGeoBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void PlDetGeoBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	char workBuf[256];
 
@@ -813,7 +647,7 @@ void PlDetGeoBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
 	(void) addCmd(workBuf, QUE_IMMEDIATE);
 }
 
-void PlDetPopBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void PlDetPopBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	char workBuf[256];
 
@@ -821,7 +655,7 @@ void PlDetPopBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
 	(void) addCmd(workBuf, QUE_IMMEDIATE);
 }
 
-void PlDetBigBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void PlDetBigBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	char workBuf[256];
 
@@ -832,7 +666,7 @@ void PlDetBigBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
 /*
  * NameUpdate_cb - updates the database with the name requested
  */
-void NameUpdate_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void NameUpdate_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	char workBuf[256], plName[PL_NAME_LEN];
 	FePlanet_t tmpPlanet;
@@ -840,8 +674,7 @@ void NameUpdate_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
 	/* Read the planet in */
 	(void) readPlanet(&tmpPlanet, LastPlanet);
 	/* Copy out the value of the field */
-	strncpy(plName, fl_get_input(fd_PlanetDetailForm->Name), (PL_NAME_LEN - 1) * sizeof(char));
-	plName[PL_NAME_LEN]='\0';
+	g_strlcpy(plName, ui_entry_get(fd_PlanetDetailForm->Name), sizeof(plName));
 	/* Put the name into the planet struct */
 	strcpy(tmpPlanet.name, plName);
 	/* Write it back to the database */
@@ -859,7 +692,7 @@ void NameUpdate_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
 /*
  * CheckpointUpdate_cb - updates the database with the checkpoint requested
  */
-void CheckpointUpdate_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void CheckpointUpdate_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	char workBuf[256], plCode[PL_PSWD_LEN];
 	FePlanet_t tmpPlanet;
@@ -867,8 +700,7 @@ void CheckpointUpdate_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
 	/* Read the planet in */
 	(void) readPlanet(&tmpPlanet, LastPlanet);
 	/* Copy out the value of the field */
-	strncpy(plCode, fl_get_input(fd_PlanetDetailForm->Checkpoint), (PL_PSWD_LEN - 1) * sizeof(char));
-	plCode[PL_PSWD_LEN]='\0';
+	g_strlcpy(plCode, ui_entry_get(fd_PlanetDetailForm->Checkpoint), sizeof(plCode));
 	/* Put the name into the planet struct */
 	strcpy(tmpPlanet.chkpoint, plCode);
 	/* Write it back to the database */
@@ -886,88 +718,58 @@ void CheckpointUpdate_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
 	/*@notreached@*/(void) addCmd(workBuf, QUE_IMMEDIATE);
 }
 
-void PlDetOk_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void PlDetOk_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
-	fl_hide_form(fd_PlanetDetailForm->PlanetDetailForm);
-}
-
-
-
-/* callbacks for form PowerRptForm */
-
-
-/* callbacks for form MinerCensusForm */
-
-
-/* callbacks for form DebugOutputForm */
-
-
-/* callbacks for form LocalEditorForm */
-
-
-/* callbacks for form HelpForm */
-
-
-/* callbacks for form Dummy3Form */
-
-
-/* callbacks for form Dummy4Form */
-
-
-/* callbacks for form Dummy5Form */
-
-/* callbacks used by many forms */
-
-/*
- * Does nothing
- */
-void dummy_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
-{
-  /* Yawn... */
+	ui_window_hide(fd_PlanetDetailForm->PlanetDetailForm);
 }
 
 /* Callbacks for form CommandForm */
-void CmdsHelpMenu_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void CmdsDoneBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
-  /* fill-in code for callback */
+	ui_window_hide(fd_CommandForm->CommandForm);
 }
 
-void CmdsDoneBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
-{
-	fl_hide_form(fd_CommandForm->CommandForm);
-}
-
-void CmdsPauseBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void CmdsPauseBtn_cb(GtkWidget *w, /*@unused@*/gpointer data)
 {
 	if (StopQueue)
 	{
 		StopQueue=FALSE;
-		fl_set_object_lcol(fd_ImpFeMain->QueueDisp, FL_BLACK);
-		fl_set_object_color(fd_ImpFeMain->QueueDisp, FL_WHEAT, FL_MCOL);
+		ui_set_level(fd_ImpFeMain->QueueDisp, UI_LEVEL_NORMAL);
+		gtk_button_set_label(GTK_BUTTON(w), "_Pause");
 	}
 	else
 	{
 		StopQueue=TRUE;
-		fl_set_object_lcol(fd_ImpFeMain->QueueDisp, FL_RED);
-		fl_set_object_color(fd_ImpFeMain->QueueDisp, FL_BLACK, FL_MCOL);
+		ui_set_level(fd_ImpFeMain->QueueDisp, UI_LEVEL_CRIT);
+		gtk_button_set_label(GTK_BUTTON(w), "_Resume");
 	}
 }
 
-void CmdsKillBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+/*
+ * selectedCmd - returns the queue key of the selected command, or -1
+ */
+static int selectedCmd(void)
 {
-	int tmp;
-	char line[95];
+	int line;
 
 	/* Try and get selected line */
-	tmp=fl_get_browser(fd_CommandForm->CmdsBrowser);
+	line=ui_browser_selected(fd_CommandForm->CmdsBrowser);
 	/* Make sure they have a line selected */
-	if (tmp == 0)
+	if (line == 0)
+	{
+		return(-1);
+	}
+	return(atoi(ui_browser_line(fd_CommandForm->CmdsBrowser, line)));
+}
+
+void CmdsKillBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
+{
+	int tmp;
+
+	if ((tmp = selectedCmd()) < 0)
 	{
 		return;
 	}
-	/* Copy out the line contents */
-	strcpy(line, fl_get_browser_line(fd_CommandForm->CmdsBrowser, tmp));
-	tmp = atoi(line);
 	(void) cancelCmd(tmp);
 }
 
@@ -975,24 +777,17 @@ void CmdsKillBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
  * CmdsBrowser_cb - called when they click on a line in the commands
  *                  browser
  */
-void CmdsBrowser_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void CmdsBrowser_cb(/*@unused@*/GtkWidget *browser, /*@unused@*/int line,
+	/*@unused@*/int button)
 {
 	int tmp, prior, len, pos;
-	char line[95], cmnd[259];
+	char cmnd[259];
 
-	/* Try and get selected line */
-	tmp=fl_get_browser(fd_CommandForm->CmdsBrowser);
-	/* Make sure they have a line selected */
-	if (tmp == 0)
+	if ((tmp = selectedCmd()) < 0)
 	{
 		return;
 	}
-	/* Copy out the line contents */
-	strcpy(line, fl_get_browser_line(fd_CommandForm->CmdsBrowser, tmp));
-	tmp = atoi(line);
-	/* Speed up output */
-	fl_freeze_form(fd_CommandForm->CommandForm);
-	strcpy(cmnd, getCmd(tmp));
+	g_strlcpy(cmnd, getCmd(tmp), sizeof(cmnd));
 	prior = getPrior(tmp);
 	len=(int) strlen(cmnd);
 	/* Convert the NL characters */
@@ -1003,17 +798,16 @@ void CmdsBrowser_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
 			cmnd[pos]='~';
 		}
 	}
-	fl_set_input(fd_CommandForm->CmdsCmd, cmnd);
-	fl_set_choice(fd_CommandForm->CmdsPriorBtn, prior);
-	fl_unfreeze_form(fd_CommandForm->CommandForm);
+	ui_entry_set(fd_CommandForm->CmdsCmd, cmnd);
+	ui_choice_set(fd_CommandForm->CmdsPriorBtn, prior);
 }
 
-void CmdsAddBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void CmdsAddBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	int len, pos;
 	char cmnd[259];
 
-	strcpy(cmnd, fl_get_input(fd_CommandForm->CmdsCmd));
+	g_strlcpy(cmnd, ui_entry_get(fd_CommandForm->CmdsCmd), sizeof(cmnd));
 	len=(int) strlen(cmnd);
 	/* Convert the NL characters */
 	for (pos=0; pos < len; pos++)
@@ -1023,24 +817,17 @@ void CmdsAddBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
 			cmnd[pos]='\n';
 		}
 	}
-	(void) addCmd(cmnd, fl_get_choice(fd_CommandForm->CmdsPriorBtn));
+	(void) addCmd(cmnd, ui_choice_get(fd_CommandForm->CmdsPriorBtn));
 }
 
-void CmdsModBtn_cb(/*@unused@*/FL_OBJECT *ob, /*@unused@*/long data)
+void CmdsModBtn_cb(/*@unused@*/GtkWidget *w, /*@unused@*/gpointer data)
 {
 	int tmp;
-	char line[95];
 
-	/* Try and get selected line */
-	tmp=fl_get_browser(fd_CommandForm->CmdsBrowser);
-	/* Make sure they have a line selected */
-	if (tmp == 0)
+	if ((tmp = selectedCmd()) < 0)
 	{
 		return;
 	}
-	/* Copy out the line contents */
-	strcpy(line, fl_get_browser_line(fd_CommandForm->CmdsBrowser, tmp));
-	tmp = atoi(line);
-	(void) modCmd(tmp, fl_get_input(fd_CommandForm->CmdsCmd),
-		   fl_get_choice(fd_CommandForm->CmdsPriorBtn));
+	(void) modCmd(tmp, ui_entry_get(fd_CommandForm->CmdsCmd),
+		   ui_choice_get(fd_CommandForm->CmdsPriorBtn));
 }

@@ -352,7 +352,8 @@ typedef struct {
  * prototypes
  */
 
-extern void impfeCleanup(void); /* called before exiting - can use xform calls */
+extern void impfeCleanup(void); /* called before exiting - can use GTK calls */
+extern void impfeQuit(void);    /* saves everything and leaves the main loop */
 
 extern void eShowInMain(); /* Displays an error in the main window text area */
 extern void ShowInMain(); /* Displays normal text in the main window text area */
@@ -388,6 +389,7 @@ extern void addSectPlan(USHORT row, USHORT col, ULONG plNum);
 /* impcon.c */
 extern BOOL cmd_connect(BOOL kill_it);
 extern int write_data(int sock, const char *buf, int len);
+extern void write_str(const char *buf);
 
 /* main.c */
 extern void setDefaults(void);
@@ -411,7 +413,7 @@ extern void scrollFeMap(int stepX, int stepY);
 extern void updateMaps(void);
 
 /* help.c */
-extern void cb_help_button(FL_OBJECT *obj, long chapter);
+extern void cb_help_button(long chapter);
 
 /* ship.c */
 extern void buildShCensus(void);

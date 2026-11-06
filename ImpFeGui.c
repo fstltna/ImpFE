@@ -1,1817 +1,908 @@
-/* Form definition file generated with fdesign. */
+/*
+ * ImpFeGui.c - builds the ImpFE windows with GTK 3
+ *
+ * This replaces the code the XForms form designer used to generate
+ * from ImpFeGui.fd. Layouts follow the original forms, but use GTK
+ * containers so the windows resize and follow the desktop theme.
+ *
+ * ImpFE is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 1, or (at your option)
+ * any later version.
+ */
 
-#include "forms.h"
 #include <stdlib.h>
 #include "ImpFeGui.h"
+#include "gui.h"
+#include "smimplogo.xpm"
+
+/* ------------------------------------------------------------------ */
+/* Layout helpers                                                     */
+/* ------------------------------------------------------------------ */
+
+static GtkWidget *vbox_new(int spacing)
+{
+	return(gtk_box_new(GTK_ORIENTATION_VERTICAL, spacing));
+}
+
+static GtkWidget *hbox_new(int spacing)
+{
+	return(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, spacing));
+}
+
+static GtkWidget *grid_new(void)
+{
+	GtkWidget *grid;
+
+	grid = gtk_grid_new();
+	gtk_grid_set_column_spacing(GTK_GRID(grid), 8);
+	gtk_grid_set_row_spacing(GTK_GRID(grid), 2);
+	return(grid);
+}
+
+/* A titled frame holding a grid; the grid is returned via *grid */
+static GtkWidget *frame_grid(const char *title, GtkWidget **grid)
+{
+	GtkWidget *frame;
+
+	frame = gtk_frame_new(title);
+	*grid = grid_new();
+	gtk_container_set_border_width(GTK_CONTAINER(*grid), 6);
+	gtk_container_add(GTK_CONTAINER(frame), *grid);
+	return(frame);
+}
+
+static GtkWidget *heading_new(const char *text)
+{
+	GtkWidget *label;
+
+	label = ui_label_new(text);
+	gtk_style_context_add_class(gtk_widget_get_style_context(label),
+		"heading");
+	return(label);
+}
+
+/* A monospaced column-heading line to sit above a browser */
+static GtkWidget *column_heads(const char *text)
+{
+	GtkWidget *label;
+
+	label = ui_label_new(text);
+	gtk_style_context_add_class(gtk_widget_get_style_context(label), "mono");
+	gtk_style_context_add_class(gtk_widget_get_style_context(label),
+		"heading");
+	gtk_widget_set_margin_start(label, 4);
+	return(label);
+}
+
+/* Packs a browser beneath its column headings */
+static GtkWidget *browser_with_heads(GtkWidget *browser, const char *heads)
+{
+	GtkWidget *box;
+
+	box = vbox_new(2);
+	if (heads != NULL)
+	{
+		gtk_box_pack_start(GTK_BOX(box), column_heads(heads), FALSE, FALSE, 0);
+	}
+	gtk_box_pack_start(GTK_BOX(box), ui_browser_widget(browser), TRUE, TRUE, 0);
+	return(box);
+}
+
+/* A row of buttons along the bottom of a window */
+static GtkWidget *button_bar(void)
+{
+	GtkWidget *bar;
+
+	bar = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
+	gtk_button_box_set_layout(GTK_BUTTON_BOX(bar), GTK_BUTTONBOX_EDGE);
+	gtk_box_set_spacing(GTK_BOX(bar), 6);
+	return(bar);
+}
+
+/* "Detailed info for ...: ####   Owner: ####   At: ####" */
+static GtkWidget *detail_title(const char *what, GtkWidget **num,
+	GtkWidget **owner, GtkWidget **rowcol)
+{
+	GtkWidget *box;
+
+	box = hbox_new(6);
+	gtk_box_pack_start(GTK_BOX(box), heading_new(what), FALSE, FALSE, 0);
+	*num = ui_label_new("");
+	gtk_label_set_width_chars(GTK_LABEL(*num), 9);
+	gtk_box_pack_start(GTK_BOX(box), *num, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(box), heading_new("Owner:"), FALSE, FALSE, 12);
+	*owner = ui_label_new("");
+	gtk_label_set_width_chars(GTK_LABEL(*owner), 10);
+	gtk_box_pack_start(GTK_BOX(box), *owner, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(box), heading_new("At:"), FALSE, FALSE, 12);
+	*rowcol = ui_label_new("");
+	gtk_box_pack_start(GTK_BOX(box), *rowcol, FALSE, FALSE, 0);
+	return(box);
+}
+
+/* ------------------------------------------------------------------ */
+/* Main window                                                        */
+/* ------------------------------------------------------------------ */
 
 FD_ImpFeMain *create_form_ImpFeMain(void)
 {
-  FL_OBJECT *obj;
-  FD_ImpFeMain *fdui = (FD_ImpFeMain *) fl_calloc(1, sizeof(*fdui));
+	FD_ImpFeMain *fdui;
+	GtkWidget *win, *outer, *menubar, *content, *status, *grid, *lbl;
 
-  fdui->ImpFeMain = fl_bgn_form(FL_NO_BOX, 650, 470);
-  obj = fl_add_box(FL_UP_BOX,0,0,650,470,"");
-    fl_set_object_resize(obj, FL_RESIZE_Y);
-  obj = fl_add_text(FL_NORMAL_TEXT,490,50,40,20,"BTU");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_NORMAL_STYLE+FL_ENGRAVED_STYLE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->HdnRtn = obj = fl_add_button(FL_HIDDEN_RET_BUTTON,430,400,20,20,"");
-    fl_set_button_shortcut(obj,"^M",1);
-    fl_set_object_boxtype(obj,FL_NO_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,HdnRtn_cb,0);
-  obj = fl_add_box(FL_UP_BOX,0,0,650,40,"");
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->MainInputBox = obj = fl_add_input(FL_NORMAL_INPUT,90,430,550,30,"");
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_TOP_LEFT);
-    fl_set_object_lstyle(obj,FL_FIXED_STYLE);
-    fl_set_object_gravity(obj, FL_SouthWest, FL_SouthEast);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MainInputBox_cb,0);
-  fdui->MainHelpMenu = obj = fl_add_menu(FL_PULLDOWN_MENU,600,10,40,20,"Help");
-    fl_set_object_shortcut(obj,"#H",1);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MainHelpMenu_cb,0);
-  fdui->MainBrowser = obj = fl_add_browser(FL_NORMAL_BROWSER,10,80,630,300,"");
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lstyle(obj,FL_FIXED_STYLE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->PrivMsgBtn = obj = fl_add_roundbutton(FL_PUSH_BUTTON,30,390,30,30,"Priv");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_MCOL,FL_RED);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,PrivMsgBtn_cb,0);
-  fdui->MainFileMenu = obj = fl_add_menu(FL_PULLDOWN_MENU,10,10,40,20,"File");
-    fl_set_object_shortcut(obj,"#F",1);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MainFileMenu_cb,0);
-  fdui->MainServerMenu = obj = fl_add_menu(FL_PULLDOWN_MENU,50,10,50,20,"Server");
-    fl_set_object_shortcut(obj,"#S",1);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MainServerMenu_cb,0);
-  obj = fl_add_box(FL_NO_BOX,0,380,650,10,"@UpLine");
-  fdui->PrivMsgWho = obj = fl_add_input(FL_NORMAL_INPUT,10,430,70,20,"");
-    fl_set_object_lstyle(obj,FL_FIXED_STYLE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,PrivMsgWho_cb,0);
-  obj = fl_add_box(FL_UP_BOX,80,390,10,80,"");
-    fl_set_object_resize(obj, FL_RESIZE_Y);
-  fdui->MainViewMenu = obj = fl_add_menu(FL_PULLDOWN_MENU,100,10,40,20,"View");
-    fl_set_object_shortcut(obj,"#V",1);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MainViewMenu_cb,0);
-  fdui->MainConfigMenu = obj = fl_add_menu(FL_PULLDOWN_MENU,530,10,70,20,"Configure");
-    fl_set_object_shortcut(obj,"#C",1);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MainConfigMenu_cb,0);
-  fdui->MainPrompt = obj = fl_add_text(FL_NORMAL_TEXT,150,390,490,40,"");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_INDIANRED,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  obj = fl_add_text(FL_NORMAL_TEXT,90,390,60,40,"Prompt:");
-    fl_set_object_boxtype(obj,FL_NO_BOX);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->BtuDisp = obj = fl_add_text(FL_NORMAL_TEXT,530,50,30,20,"");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->TimeDisp = obj = fl_add_text(FL_NORMAL_TEXT,610,50,30,20,"");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  obj = fl_add_text(FL_NORMAL_TEXT,570,50,40,20,"TIME");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_NORMAL_STYLE+FL_ENGRAVED_STYLE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  obj = fl_add_text(FL_NORMAL_TEXT,350,50,60,20,"STATUS");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_NORMAL_STYLE+FL_ENGRAVED_STYLE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->StatusBox = obj = fl_add_text(FL_NORMAL_TEXT,410,50,70,20,"Offline");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  obj = fl_add_text(FL_NORMAL_TEXT,220,50,90,20,"CMD QUEUE");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_NORMAL_STYLE+FL_ENGRAVED_STYLE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->QueueDisp = obj = fl_add_text(FL_NORMAL_TEXT,310,50,30,20,"");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  obj = fl_add_text(FL_NORMAL_TEXT,70,50,110,20,"ACTIVE SCRIPTS");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_NORMAL_STYLE+FL_ENGRAVED_STYLE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->ScriptDisp = obj = fl_add_text(FL_NORMAL_TEXT,180,50,30,20,"");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fl_end_form();
+	fdui = g_new0(FD_ImpFeMain, 1);
 
-  fdui->ImpFeMain->fdui = fdui;
+	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_window_set_title(GTK_WINDOW(win), "ImpFE");
+	gtk_window_set_default_size(GTK_WINDOW(win), 780, 560);
+	g_signal_connect(win, "delete-event", G_CALLBACK(close_main_form), NULL);
+	fdui->ImpFeMain = win;
 
-  return fdui;
+	outer = vbox_new(0);
+	gtk_container_add(GTK_CONTAINER(win), outer);
+
+	/* Menus */
+	menubar = gtk_menu_bar_new();
+	gtk_box_pack_start(GTK_BOX(outer), menubar, FALSE, FALSE, 0);
+	fdui->MainFileMenu = ui_menu_new(menubar, "_File", MAIN_FILE_MENU,
+		MainFileMenu_cb);
+	fdui->MainServerMenu = ui_menu_new(menubar, "_Server", MAIN_SERVER_MENU,
+		MainServerMenu_cb);
+	fdui->MainViewMenu = ui_menu_new(menubar, "_View", MAIN_VIEW_MENU,
+		MainViewMenu_cb);
+	fdui->MainConfigMenu = ui_menu_new(menubar, "_Configure",
+		MAIN_CONFIG_MENU, MainConfigMenu_cb);
+	fdui->MainHelpMenu = ui_menu_new(menubar, "_Help", MAIN_HELP_MENU,
+		MainHelpMenu_cb);
+
+	content = vbox_new(6);
+	gtk_container_set_border_width(GTK_CONTAINER(content), 8);
+	gtk_box_pack_start(GTK_BOX(outer), content, TRUE, TRUE, 0);
+
+	/* Status line */
+	status = hbox_new(4);
+	gtk_box_pack_start(GTK_BOX(content), status, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(status), heading_new("Active scripts"),
+		FALSE, FALSE, 0);
+	fdui->ScriptDisp = ui_status_new("", 4);
+	gtk_box_pack_start(GTK_BOX(status), fdui->ScriptDisp, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(status), heading_new("Cmd queue"),
+		FALSE, FALSE, 8);
+	fdui->QueueDisp = ui_status_new("", 4);
+	gtk_box_pack_start(GTK_BOX(status), fdui->QueueDisp, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(status), heading_new("Status"),
+		FALSE, FALSE, 8);
+	fdui->StatusBox = ui_status_new("Offline", 10);
+	gtk_box_pack_start(GTK_BOX(status), fdui->StatusBox, FALSE, FALSE, 0);
+	fdui->TimeDisp = ui_status_new("", 5);
+	gtk_box_pack_end(GTK_BOX(status), fdui->TimeDisp, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(status), heading_new("Time"), FALSE, FALSE, 0);
+	fdui->BtuDisp = ui_status_new("", 5);
+	gtk_box_pack_end(GTK_BOX(status), fdui->BtuDisp, FALSE, FALSE, 8);
+	gtk_box_pack_end(GTK_BOX(status), heading_new("BTU"), FALSE, FALSE, 0);
+
+	/* Server output */
+	fdui->MainBrowser = ui_browser_new(TRUE, NULL);
+	ui_browser_set_selectable(fdui->MainBrowser, FALSE);
+	gtk_box_pack_start(GTK_BOX(content), ui_browser_widget(fdui->MainBrowser),
+		TRUE, TRUE, 0);
+
+	/* Prompt and input line */
+	grid = grid_new();
+	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
+	gtk_box_pack_start(GTK_BOX(content), grid, FALSE, FALSE, 0);
+
+	fdui->PrivMsgBtn = gtk_check_button_new_with_mnemonic("_Priv");
+	gtk_grid_attach(GTK_GRID(grid), fdui->PrivMsgBtn, 0, 0, 1, 1);
+	lbl = heading_new("Prompt:");
+	gtk_grid_attach(GTK_GRID(grid), lbl, 1, 0, 1, 1);
+	fdui->MainPrompt = ui_label_new("");
+	gtk_style_context_add_class(gtk_widget_get_style_context(fdui->MainPrompt),
+		"prompt");
+	gtk_label_set_ellipsize(GTK_LABEL(fdui->MainPrompt), PANGO_ELLIPSIZE_END);
+	gtk_widget_set_hexpand(fdui->MainPrompt, TRUE);
+	gtk_grid_attach(GTK_GRID(grid), fdui->MainPrompt, 2, 0, 1, 1);
+
+	fdui->PrivMsgWho = ui_entry_new(0, 8);
+	gtk_grid_attach(GTK_GRID(grid), fdui->PrivMsgWho, 0, 1, 1, 1);
+	fdui->MainInputBox = ui_entry_new(257, 0);
+	gtk_style_context_add_class(
+		gtk_widget_get_style_context(fdui->MainInputBox), "mono");
+	gtk_widget_set_hexpand(fdui->MainInputBox, TRUE);
+	g_signal_connect(fdui->MainInputBox, "activate",
+		G_CALLBACK(MainInputBox_cb), GINT_TO_POINTER(1));
+	gtk_grid_attach(GTK_GRID(grid), fdui->MainInputBox, 1, 1, 2, 1);
+
+	gtk_widget_show_all(outer);
+	gtk_widget_grab_focus(fdui->MainInputBox);
+	return(fdui);
 }
-/*---------------------------------------*/
+
+/* ------------------------------------------------------------------ */
+/* About box                                                          */
+/* ------------------------------------------------------------------ */
 
 FD_ImpFeAbout *create_form_ImpFeAbout(void)
 {
-  FL_OBJECT *obj;
-  FD_ImpFeAbout *fdui = (FD_ImpFeAbout *) fl_calloc(1, sizeof(*fdui));
+	FD_ImpFeAbout *fdui;
+	GtkWidget *box, *top, *bar;
 
-  fdui->ImpFeAbout = fl_bgn_form(FL_NO_BOX, 320, 300);
-  obj = fl_add_box(FL_UP_BOX,0,0,320,300,"");
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->AboutOkButn = obj = fl_add_button(FL_NORMAL_BUTTON,110,260,80,30,"OK");
-    fl_set_button_shortcut(obj,"Oo",1);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,AboutOk_cb,0);
-  fdui->MainAboutText = obj = fl_add_text(FL_NORMAL_TEXT,10,110,300,140,"(C) 1997 Marisa Giancarla");
-    fl_set_object_boxtype(obj,FL_DOWN_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_TOP_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->ImpVer = obj = fl_add_text(FL_NORMAL_TEXT,170,20,100,30,"ImpFE v0.0.1");
-    fl_set_object_lcolor(obj,FL_WHITE);
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE+FL_ENGRAVED_STYLE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->ImpLogo = obj = fl_add_pixmap(FL_NORMAL_PIXMAP,20,20,50,50,"");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fl_end_form();
+	fdui = g_new0(FD_ImpFeAbout, 1);
+	fdui->ImpFeAbout = ui_window_new("About ImpFE", 360, -1);
+	gtk_window_set_resizable(GTK_WINDOW(fdui->ImpFeAbout), FALSE);
 
-  fdui->ImpFeAbout->fdui = fdui;
+	box = vbox_new(12);
+	gtk_container_add(GTK_CONTAINER(fdui->ImpFeAbout), box);
 
-  return fdui;
+	top = hbox_new(16);
+	gtk_box_pack_start(GTK_BOX(box), top, FALSE, FALSE, 0);
+	fdui->ImpLogo = gtk_image_new_from_pixbuf(
+		ui_xpm_pixbuf((const char **) smimplogo));
+	gtk_box_pack_start(GTK_BOX(top), fdui->ImpLogo, FALSE, FALSE, 0);
+	fdui->ImpVer = ui_label_new("ImpFE");
+	gtk_style_context_add_class(gtk_widget_get_style_context(fdui->ImpVer),
+		"title");
+	gtk_box_pack_start(GTK_BOX(top), fdui->ImpVer, FALSE, FALSE, 0);
+
+	fdui->MainAboutText = ui_label_new("");
+	gtk_label_set_line_wrap(GTK_LABEL(fdui->MainAboutText), TRUE);
+	gtk_box_pack_start(GTK_BOX(box), fdui->MainAboutText, TRUE, TRUE, 0);
+
+	bar = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
+	gtk_button_box_set_layout(GTK_BUTTON_BOX(bar), GTK_BUTTONBOX_CENTER);
+	fdui->AboutOkButn = ui_button_new("_OK", G_CALLBACK(AboutOk_cb), 0);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->AboutOkButn);
+	gtk_box_pack_start(GTK_BOX(box), bar, FALSE, FALSE, 0);
+	return(fdui);
 }
-/*---------------------------------------*/
+
+/* ------------------------------------------------------------------ */
+/* Map                                                                */
+/* ------------------------------------------------------------------ */
+
+/* The navigation pad: position, label and DirBtn_cb code */
+static const struct
+{
+	int x, y;
+	const char *label;
+	int code;
+	const char *tip;
+} NavPad[] =
+{
+	{ 0, 0, "\xe2\x87\x96", 70, "Up-left a full screen" },
+	{ 2, 0, "\xe2\x87\x91", 80, "Up a full screen" },
+	{ 4, 0, "\xe2\x87\x97", 90, "Up-right a full screen" },
+	{ 1, 1, "\xe2\x86\x96", 7, "Up-left one sector" },
+	{ 2, 1, "\xe2\x86\x91", 8, "Up one sector" },
+	{ 3, 1, "\xe2\x86\x97", 9, "Up-right one sector" },
+	{ 0, 2, "\xe2\x87\x90", 40, "Left a full screen" },
+	{ 1, 2, "\xe2\x86\x90", 4, "Left one sector" },
+	{ 2, 2, "\xe2\x97\x8f", 5, "Centre on home planet" },
+	{ 3, 2, "\xe2\x86\x92", 6, "Right one sector" },
+	{ 4, 2, "\xe2\x87\x92", 60, "Right a full screen" },
+	{ 1, 3, "\xe2\x86\x99", 1, "Down-left one sector" },
+	{ 2, 3, "\xe2\x86\x93", 2, "Down one sector" },
+	{ 3, 3, "\xe2\x86\x98", 3, "Down-right one sector" },
+	{ 0, 4, "\xe2\x87\x99", 10, "Down-left a full screen" },
+	{ 2, 4, "\xe2\x87\x93", 20, "Down a full screen" },
+	{ 4, 4, "\xe2\x87\x98", 30, "Down-right a full screen" }
+};
 
 FD_MapForm *create_form_MapForm(void)
 {
-  FL_OBJECT *obj;
-  FD_MapForm *fdui = (FD_MapForm *) fl_calloc(1, sizeof(*fdui));
+	FD_MapForm *fdui;
+	GtkWidget *box, *map, *side, *pad, *btn, *jump, *ev, *bar;
+	unsigned int i;
+	int row, col;
 
-  fdui->MapForm = fl_bgn_form(FL_NO_BOX, 760, 470);
-  obj = fl_add_box(FL_UP_BOX,0,0,760,470,"");
-  fdui->AA = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,510,70,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,10);
-  obj = fl_add_box(FL_UP_BOX,580,50,170,170,"");
-  obj = fl_add_box(FL_UP_BOX,0,0,760,40,"");
-  fdui->MapHelpMenu = obj = fl_add_menu(FL_PULLDOWN_MENU,700,10,50,20,"Help");
-    fl_set_object_shortcut(obj,"H",1);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_callback(obj,MapHelpMenu_cb,0);
-  fdui->MapFileMenu = obj = fl_add_menu(FL_PULLDOWN_MENU,10,10,40,20,"File");
-    fl_set_object_shortcut(obj,"F",1);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_callback(obj,MapFileMenu_cb,0);
-  fdui->UpBtn = obj = fl_add_button(FL_TOUCH_BUTTON,650,90,30,30,"@8->");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,8);
-  fdui->DnBtn = obj = fl_add_button(FL_TOUCH_BUTTON,650,150,30,30,"@2->");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,2);
-  fdui->RtBtn = obj = fl_add_button(FL_TOUCH_BUTTON,680,120,30,30,"@->");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,6);
-  fdui->LtBtn = obj = fl_add_button(FL_TOUCH_BUTTON,620,120,30,30,"@4->");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,4);
-  fdui->DRBtn = obj = fl_add_button(FL_TOUCH_BUTTON,680,150,30,30,"@3->");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,3);
-  fdui->URBtn = obj = fl_add_button(FL_TOUCH_BUTTON,680,90,30,30,"@9->");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,9);
-  fdui->ULBtn = obj = fl_add_button(FL_TOUCH_BUTTON,620,90,30,30,"@7->");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,7);
-  fdui->DLBtn = obj = fl_add_button(FL_TOUCH_BUTTON,620,150,30,30,"@1->");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,1);
-  fdui->BigUpBtn = obj = fl_add_button(FL_TOUCH_BUTTON,650,60,30,30,"@8>>");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,80);
-  fdui->BigRtBtn = obj = fl_add_button(FL_TOUCH_BUTTON,710,120,30,30,"@>>");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,60);
-  fdui->BigDnBtn = obj = fl_add_button(FL_TOUCH_BUTTON,650,180,30,30,"@2>>");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,20);
-  fdui->BigLtBtn = obj = fl_add_button(FL_TOUCH_BUTTON,590,120,30,30,"@4>>");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,40);
-  fdui->BigURBtn = obj = fl_add_button(FL_TOUCH_BUTTON,710,60,30,30,"@9>>");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,90);
-  fdui->BigDRBtn = obj = fl_add_button(FL_TOUCH_BUTTON,710,180,30,30,"@3>>");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,30);
-  fdui->BigULBtn = obj = fl_add_button(FL_TOUCH_BUTTON,590,60,30,30,"@7>>");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,70);
-  fdui->BigDLBtn = obj = fl_add_button(FL_TOUCH_BUTTON,590,180,30,30,"@1>>");
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,10);
+	fdui = g_new0(FD_MapForm, 1);
+	fdui->MapForm = ui_window_new("ImpFE Map Display", -1, -1);
 
-  fdui->MapCellGroup = fl_bgn_group();
-  fdui->A1 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,60,70,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,1);
-  fdui->B1 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,60,120,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,11);
-  fdui->C1 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,60,170,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,21);
-  fdui->D1 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,60,220,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,31);
-  fdui->E1 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,60,270,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,41);
-  fdui->F1 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,60,320,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,51);
-  fdui->G1 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,60,370,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,61);
-  fdui->A2 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,110,70,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,2);
-  fdui->A3 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,160,70,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,3);
-  fdui->A4 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,210,70,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,4);
-  fdui->A5 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,260,70,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,5);
-  fdui->A6 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,310,70,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,6);
-  fdui->A7 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,360,70,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,7);
-  fdui->A8 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,410,70,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,8);
-  fdui->A9 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,460,70,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,9);
-  fdui->B2 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,110,120,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,12);
-  fdui->B3 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,160,120,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,13);
-  fdui->B4 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,210,120,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,14);
-  fdui->B5 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,260,120,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,15);
-  fdui->B6 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,310,120,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,16);
-  fdui->B8 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,410,120,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,18);
-  fdui->B9 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,460,120,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,19);
-  fdui->B7 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,360,120,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,17);
-  fdui->C2 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,110,170,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,22);
-  fdui->C3 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,160,170,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,23);
-  fdui->C4 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,210,170,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,24);
-  fdui->C5 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,260,170,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,25);
-  fdui->C6 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,310,170,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,26);
-  fdui->C7 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,360,170,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,27);
-  fdui->C8 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,410,170,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,28);
-  fdui->C9 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,460,170,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,29);
-  fdui->D2 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,110,220,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,32);
-  fdui->D3 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,160,220,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,33);
-  fdui->D4 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,210,220,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,34);
-  fdui->D5 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,260,220,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,35);
-  fdui->D6 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,310,220,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,36);
-  fdui->D7 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,360,220,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,37);
-  fdui->D8 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,410,220,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,38);
-  fdui->D9 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,460,220,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,39);
-  fdui->E2 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,110,270,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,42);
-  fdui->E3 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,160,270,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,43);
-  fdui->E4 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,210,270,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,44);
-  fdui->E5 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,260,270,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,45);
-  fdui->E6 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,310,270,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,46);
-  fdui->E7 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,360,270,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,47);
-  fdui->E8 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,410,270,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,48);
-  fdui->E9 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,460,270,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,49);
-  fdui->F2 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,110,320,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,52);
-  fdui->F3 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,160,320,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,53);
-  fdui->F4 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,210,320,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,54);
-  fdui->F5 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,260,320,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,55);
-  fdui->F6 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,310,320,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,56);
-  fdui->F7 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,360,320,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,57);
-  fdui->F8 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,410,320,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,58);
-  fdui->F9 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,460,320,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,59);
-  fdui->G2 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,110,370,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,62);
-  fdui->G3 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,160,370,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,63);
-  fdui->G4 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,210,370,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,64);
-  fdui->G5 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,260,370,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,65);
-  fdui->G6 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,310,370,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,66);
-  fdui->G7 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,360,370,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,67);
-  fdui->G8 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,410,370,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,68);
-  fdui->G9 = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,460,370,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,69);
-  fdui->BA = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,510,120,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,20);
-  fdui->CA = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,510,170,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,30);
-  fdui->DA = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,510,220,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,40);
-  fdui->EA = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,510,270,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,50);
-  fdui->FA = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,510,320,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,60);
-  fdui->GA = obj = fl_add_pixmapbutton(FL_NORMAL_BUTTON,510,370,50,50,"");
-    fl_set_object_boxtype(obj,FL_FLAT_BOX);
-    fl_set_object_color(obj,FL_BLACK,FL_YELLOW);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MB_cb,70);
-  fl_end_group();
+	box = vbox_new(8);
+	gtk_container_add(GTK_CONTAINER(fdui->MapForm), box);
+	ev = hbox_new(12);
+	gtk_box_pack_start(GTK_BOX(box), ev, TRUE, TRUE, 0);
 
-  fdui->Col1 = obj = fl_add_text(FL_NORMAL_TEXT,60,50,50,20,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Col2 = obj = fl_add_text(FL_NORMAL_TEXT,110,50,50,20,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Col3 = obj = fl_add_text(FL_NORMAL_TEXT,160,50,50,20,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Col4 = obj = fl_add_text(FL_NORMAL_TEXT,210,50,50,20,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Col5 = obj = fl_add_text(FL_NORMAL_TEXT,260,50,50,20,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Col6 = obj = fl_add_text(FL_NORMAL_TEXT,310,50,50,20,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Col7 = obj = fl_add_text(FL_NORMAL_TEXT,360,50,50,20,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Col8 = obj = fl_add_text(FL_NORMAL_TEXT,410,50,50,20,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Col9 = obj = fl_add_text(FL_NORMAL_TEXT,460,50,50,20,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->ColA = obj = fl_add_text(FL_NORMAL_TEXT,510,50,50,20,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Row1 = obj = fl_add_text(FL_NORMAL_TEXT,10,70,50,50,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Row2 = obj = fl_add_text(FL_NORMAL_TEXT,10,120,50,50,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Row3 = obj = fl_add_text(FL_NORMAL_TEXT,10,170,50,50,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Row4 = obj = fl_add_text(FL_NORMAL_TEXT,10,220,50,50,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Row5 = obj = fl_add_text(FL_NORMAL_TEXT,10,270,50,50,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Row6 = obj = fl_add_text(FL_NORMAL_TEXT,10,320,50,50,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->Row7 = obj = fl_add_text(FL_NORMAL_TEXT,10,370,50,50,"1234");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-  fdui->JmRow = obj = fl_add_input(FL_INT_INPUT,590,240,40,20,"Row");
-    fl_set_object_lalign(obj,FL_ALIGN_TOP_LEFT);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,dummy_cb,0);
-  fdui->JmCol = obj = fl_add_input(FL_INT_INPUT,700,240,40,20,"Col");
-    fl_set_object_lalign(obj,FL_ALIGN_TOP_RIGHT);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,dummy_cb,0);
-  fdui->JmpBtn = obj = fl_add_button(FL_NORMAL_BUTTON,590,270,150,30,"Jump!");
-    fl_set_button_shortcut(obj,"#J",1);
-    fl_set_object_color(obj,FL_INDIANRED,FL_DARKTOMATO);
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_callback(obj,JmpBtn_cb,0);
-  fdui->HomeBtn = obj = fl_add_button(FL_TOUCH_BUTTON,650,120,30,30,"@circle");
-    fl_set_button_shortcut(obj,"Hh",1);
-    fl_set_object_boxtype(obj,FL_RFLAT_BOX);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,DirBtn_cb,5);
-  fdui->MapOkButn = obj = fl_add_button(FL_NORMAL_BUTTON,320,430,50,30,"OK");
-    fl_set_button_shortcut(obj,"#O",1);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,MapOk_cb,0);
-  fl_end_form();
+	/* Sector grid with coordinate labels */
+	map = gtk_grid_new();
+	gtk_grid_set_column_spacing(GTK_GRID(map), 0);
+	gtk_grid_set_row_spacing(GTK_GRID(map), 0);
+	gtk_box_pack_start(GTK_BOX(ev), map, FALSE, FALSE, 0);
+	for (col = 0; col < MAP_COLS; col++)
+	{
+		fdui->ColLbl[col] = ui_label_new("");
+		gtk_label_set_xalign(GTK_LABEL(fdui->ColLbl[col]), 0.5);
+		gtk_style_context_add_class(
+			gtk_widget_get_style_context(fdui->ColLbl[col]), "map-coord");
+		gtk_grid_attach(GTK_GRID(map), fdui->ColLbl[col], col + 1, 0, 1, 1);
+	}
+	for (row = 0; row < MAP_ROWS; row++)
+	{
+		fdui->RowLbl[row] = ui_label_new("");
+		gtk_widget_set_margin_end(fdui->RowLbl[row], 4);
+		gtk_style_context_add_class(
+			gtk_widget_get_style_context(fdui->RowLbl[row]), "map-coord");
+		gtk_grid_attach(GTK_GRID(map), fdui->RowLbl[row], 0, row + 1, 1, 1);
+		for (col = 0; col < MAP_COLS; col++)
+		{
+			/* Event box so the cell can tell which mouse button was used */
+			btn = gtk_event_box_new();
+			gtk_style_context_add_class(gtk_widget_get_style_context(btn),
+				"map-grid");
+			fdui->Cell[row][col] = gtk_image_new();
+			gtk_widget_set_size_request(fdui->Cell[row][col], 50, 50);
+			gtk_container_add(GTK_CONTAINER(btn), fdui->Cell[row][col]);
+			g_signal_connect(btn, "button-press-event", G_CALLBACK(MB_cb),
+				GINT_TO_POINTER((row * 10) + col + 1));
+			gtk_grid_attach(GTK_GRID(map), btn, col + 1, row + 1, 1, 1);
+		}
+	}
 
-  fdui->MapForm->fdui = fdui;
+	/* Navigation pad and jump-to controls */
+	side = vbox_new(8);
+	gtk_box_pack_start(GTK_BOX(ev), side, FALSE, FALSE, 0);
+	pad = gtk_grid_new();
+	gtk_grid_set_row_homogeneous(GTK_GRID(pad), TRUE);
+	gtk_grid_set_column_homogeneous(GTK_GRID(pad), TRUE);
+	gtk_box_pack_start(GTK_BOX(side), pad, FALSE, FALSE, 0);
+	for (i = 0; i < G_N_ELEMENTS(NavPad); i++)
+	{
+		btn = ui_button_new(NavPad[i].label, G_CALLBACK(DirBtn_cb),
+			NavPad[i].code);
+		gtk_widget_set_tooltip_text(btn, NavPad[i].tip);
+		gtk_grid_attach(GTK_GRID(pad), btn, NavPad[i].x, NavPad[i].y, 1, 1);
+		if (NavPad[i].code == 5)
+		{
+			fdui->HomeBtn = btn;
+		}
+	}
 
-  return fdui;
+	jump = grid_new();
+	gtk_box_pack_start(GTK_BOX(side), jump, FALSE, FALSE, 8);
+	gtk_grid_attach(GTK_GRID(jump), ui_label_new("Row"), 0, 0, 1, 1);
+	fdui->JmRow = ui_entry_new(5, 5);
+	gtk_grid_attach(GTK_GRID(jump), fdui->JmRow, 1, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(jump), ui_label_new("Col"), 2, 0, 1, 1);
+	fdui->JmCol = ui_entry_new(5, 5);
+	gtk_grid_attach(GTK_GRID(jump), fdui->JmCol, 3, 0, 1, 1);
+	fdui->JmpBtn = ui_button_new("_Jump!", G_CALLBACK(JmpBtn_cb), 0);
+	gtk_grid_attach(GTK_GRID(jump), fdui->JmpBtn, 0, 1, 4, 1);
+	g_signal_connect(fdui->JmRow, "activate", G_CALLBACK(JmpBtn_cb), NULL);
+	g_signal_connect(fdui->JmCol, "activate", G_CALLBACK(JmpBtn_cb), NULL);
+
+	gtk_box_pack_start(GTK_BOX(side),
+		ui_label_new("Middle-click a planet\nfor its details."),
+		FALSE, FALSE, 0);
+
+	bar = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
+	gtk_button_box_set_layout(GTK_BUTTON_BOX(bar), GTK_BUTTONBOX_CENTER);
+	fdui->MapOkButn = ui_button_new("_OK", G_CALLBACK(MapOk_cb), 0);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->MapOkButn);
+	gtk_box_pack_start(GTK_BOX(box), bar, FALSE, FALSE, 0);
+	return(fdui);
 }
-/*---------------------------------------*/
+
+/* ------------------------------------------------------------------ */
+/* Tasks                                                              */
+/* ------------------------------------------------------------------ */
 
 FD_TasksForm *create_form_TasksForm(void)
 {
-  FL_OBJECT *obj;
-  FD_TasksForm *fdui = (FD_TasksForm *) fl_calloc(1, sizeof(*fdui));
+	FD_TasksForm *fdui;
+	GtkWidget *box, *bar;
 
-  fdui->TasksForm = fl_bgn_form(FL_NO_BOX, 350, 230);
-  obj = fl_add_box(FL_UP_BOX,0,0,350,230,"");
-  obj = fl_add_box(FL_UP_BOX,0,0,350,40,"");
-  fdui->TasksHelpMenu = obj = fl_add_menu(FL_PULLDOWN_MENU,300,10,40,20,"Help");
-    fl_set_object_shortcut(obj,"H",1);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_callback(obj,TasksHelpMenu_cb,0);
-  fdui->TasksTasksMenu = obj = fl_add_menu(FL_PULLDOWN_MENU,10,10,40,20,"Tasks");
-    fl_set_object_shortcut(obj,"T",1);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_callback(obj,TasksTasksMenu_cb,0);
-  fdui->TasksBrowser = obj = fl_add_browser(FL_SELECT_BROWSER,10,70,330,110,"");
-  obj = fl_add_text(FL_NORMAL_TEXT,10,50,40,20,"Num");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,50,50,200,20,"Description");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,250,50,60,20,"State");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
+	fdui = g_new0(FD_TasksForm, 1);
+	fdui->TasksForm = ui_window_new("ImpFE Tasks", 420, 280);
+	box = vbox_new(8);
+	gtk_container_add(GTK_CONTAINER(fdui->TasksForm), box);
 
-  fdui->TasksBtns = fl_bgn_group();
-  fdui->TasksUpdtBtn = obj = fl_add_button(FL_NORMAL_BUTTON,40,200,60,20,"Update");
-    fl_set_button_shortcut(obj,"#U",1);
-    fl_set_object_callback(obj,TasksUpdtBtn_cb,0);
-  fdui->TasksKillBtn = obj = fl_add_button(FL_NORMAL_BUTTON,230,200,60,20,"Kill");
-    fl_set_button_shortcut(obj,"#K",1);
-    fl_set_object_callback(obj,TasksKillBtn_cb,0);
-  fdui->TasksDoneBtn = obj = fl_add_button(FL_NORMAL_BUTTON,135,200,60,20,"Ok");
-    fl_set_button_shortcut(obj,"#O",1);
-    fl_set_object_callback(obj,TasksDoneBtn_cb,0);
-  fl_end_group();
+	fdui->TasksBrowser = ui_browser_new(TRUE, NULL);
+	gtk_box_pack_start(GTK_BOX(box), browser_with_heads(fdui->TasksBrowser,
+		"Num  Description                     State"), TRUE, TRUE, 0);
 
-  fl_end_form();
-
-  fdui->TasksForm->fdui = fdui;
-
-  return fdui;
+	bar = button_bar();
+	fdui->TasksUpdtBtn = ui_button_new("_Update", G_CALLBACK(TasksUpdtBtn_cb), 0);
+	fdui->TasksDoneBtn = ui_button_new("_OK", G_CALLBACK(TasksDoneBtn_cb), 0);
+	fdui->TasksKillBtn = ui_button_new("_Kill", G_CALLBACK(TasksKillBtn_cb), 0);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->TasksUpdtBtn);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->TasksDoneBtn);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->TasksKillBtn);
+	gtk_box_pack_start(GTK_BOX(box), bar, FALSE, FALSE, 0);
+	return(fdui);
 }
-/*---------------------------------------*/
+
+/* ------------------------------------------------------------------ */
+/* Server configuration                                               */
+/* ------------------------------------------------------------------ */
 
 FD_ServCfgForm *create_form_ServCfgForm(void)
 {
-  FL_OBJECT *obj;
-  FD_ServCfgForm *fdui = (FD_ServCfgForm *) fl_calloc(1, sizeof(*fdui));
+	FD_ServCfgForm *fdui;
+	GtkWidget *box, *row, *frame, *grid, *bar;
 
-  fdui->ServCfgForm = fl_bgn_form(FL_NO_BOX, 650, 400);
-  obj = fl_add_box(FL_UP_BOX,0,0,650,400,"");
-  obj = fl_add_box(FL_UP_BOX,170,180,300,160,"");
-  obj = fl_add_box(FL_UP_BOX,330,20,300,150,"");
-  obj = fl_add_box(FL_UP_BOX,20,20,300,150,"");
-  fdui->ServName = obj = fl_add_input(FL_NORMAL_INPUT,130,70,150,30,"Server Name");
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,ServName_cb,0);
-  fdui->ServPort = obj = fl_add_input(FL_INT_INPUT,130,120,60,30,"Port");
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_callback(obj,ServPort_cb,0);
-  fdui->PlayerName = obj = fl_add_input(FL_NORMAL_INPUT,390,80,210,30,"Name");
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_callback(obj,PlayerName_cb,0);
-  fdui->PlayerPswd = obj = fl_add_input(FL_SECRET_INPUT,390,120,150,30,"Pswd");
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,PlayerPswd_cb,0);
-  fdui->GameDesc = obj = fl_add_input(FL_NORMAL_INPUT,190,270,270,30,"Game Description");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_TOP);
-    fl_set_object_callback(obj,GameDesc_cb,0);
+	fdui = g_new0(FD_ServCfgForm, 1);
+	fdui->ServCfgForm = ui_window_new("ImpFE Host Config", -1, -1);
+	gtk_window_set_modal(GTK_WINDOW(fdui->ServCfgForm), TRUE);
 
-  fdui->ServerDataGroup = fl_bgn_group();
-  obj = fl_add_text(FL_NORMAL_TEXT,30,30,280,30,"Server Data");
-    fl_set_object_lcolor(obj,FL_SLATEBLUE);
-    fl_set_object_lsize(obj,FL_LARGE_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_NORMAL_STYLE+FL_EMBOSSED_STYLE);
-  fl_end_group();
+	box = vbox_new(10);
+	gtk_container_add(GTK_CONTAINER(fdui->ServCfgForm), box);
+	row = hbox_new(10);
+	gtk_box_pack_start(GTK_BOX(box), row, FALSE, FALSE, 0);
 
-  obj = fl_add_text(FL_NORMAL_TEXT,340,30,280,30,"Player Data");
-    fl_set_object_lcolor(obj,FL_SLATEBLUE);
-    fl_set_object_lsize(obj,FL_LARGE_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_NORMAL_STYLE+FL_EMBOSSED_STYLE);
-  fdui->ServCfgOkBtn = obj = fl_add_button(FL_NORMAL_BUTTON,20,360,60,30,"OK");
-    fl_set_button_shortcut(obj,"#O",1);
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_callback(obj,ServCfgOkBtn_cb,0);
-  fdui->ServCfgCancelBtn = obj = fl_add_button(FL_NORMAL_BUTTON,570,360,60,30,"Cancel");
-    fl_set_button_shortcut(obj,"#C",1);
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_callback(obj,ServCfgCancelBtn_cb,0);
-  obj = fl_add_text(FL_NORMAL_TEXT,180,190,280,30,"World Data");
-    fl_set_object_lcolor(obj,FL_SLATEBLUE);
-    fl_set_object_lsize(obj,FL_LARGE_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_NORMAL_STYLE+FL_EMBOSSED_STYLE);
-  fl_end_form();
+	frame = frame_grid("Server Data", &grid);
+	gtk_box_pack_start(GTK_BOX(row), frame, TRUE, TRUE, 0);
+	gtk_grid_attach(GTK_GRID(grid), ui_label_new("Server name"), 0, 0, 1, 1);
+	fdui->ServName = ui_entry_new(0, 24);
+	gtk_grid_attach(GTK_GRID(grid), fdui->ServName, 1, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), ui_label_new("Port"), 0, 1, 1, 1);
+	fdui->ServPort = ui_entry_new(0, 6);
+	gtk_widget_set_halign(fdui->ServPort, GTK_ALIGN_START);
+	gtk_entry_set_input_purpose(GTK_ENTRY(fdui->ServPort),
+		GTK_INPUT_PURPOSE_DIGITS);
+	gtk_grid_attach(GTK_GRID(grid), fdui->ServPort, 1, 1, 1, 1);
 
-  fdui->ServCfgForm->fdui = fdui;
+	frame = frame_grid("Player Data", &grid);
+	gtk_box_pack_start(GTK_BOX(row), frame, TRUE, TRUE, 0);
+	gtk_grid_attach(GTK_GRID(grid), ui_label_new("Name"), 0, 0, 1, 1);
+	fdui->PlayerName = ui_entry_new(0, 24);
+	gtk_grid_attach(GTK_GRID(grid), fdui->PlayerName, 1, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), ui_label_new("Password"), 0, 1, 1, 1);
+	fdui->PlayerPswd = ui_entry_new(0, 24);
+	gtk_entry_set_visibility(GTK_ENTRY(fdui->PlayerPswd), FALSE);
+	gtk_entry_set_input_purpose(GTK_ENTRY(fdui->PlayerPswd),
+		GTK_INPUT_PURPOSE_PASSWORD);
+	gtk_grid_attach(GTK_GRID(grid), fdui->PlayerPswd, 1, 1, 1, 1);
 
-  return fdui;
+	frame = frame_grid("World Data", &grid);
+	gtk_box_pack_start(GTK_BOX(box), frame, FALSE, FALSE, 0);
+	gtk_grid_attach(GTK_GRID(grid), ui_label_new("Game description"),
+		0, 0, 1, 1);
+	fdui->GameDesc = ui_entry_new(0, 40);
+	gtk_widget_set_hexpand(fdui->GameDesc, TRUE);
+	gtk_grid_attach(GTK_GRID(grid), fdui->GameDesc, 1, 0, 1, 1);
+
+	bar = button_bar();
+	fdui->ServCfgOkBtn = ui_button_new("_OK", G_CALLBACK(ServCfgOkBtn_cb), 0);
+	fdui->ServCfgCancelBtn = ui_button_new("_Cancel",
+		G_CALLBACK(ServCfgCancelBtn_cb), 0);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->ServCfgOkBtn);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->ServCfgCancelBtn);
+	gtk_box_pack_start(GTK_BOX(box), bar, FALSE, FALSE, 0);
+	return(fdui);
 }
-/*---------------------------------------*/
+
+/* ------------------------------------------------------------------ */
+/* Ship and planet census                                             */
+/* ------------------------------------------------------------------ */
 
 FD_ShipCensusForm *create_form_ShipCensusForm(void)
 {
-  FL_OBJECT *obj;
-  FD_ShipCensusForm *fdui = (FD_ShipCensusForm *) fl_calloc(1, sizeof(*fdui));
+	FD_ShipCensusForm *fdui;
+	GtkWidget *box, *bar;
+	gchar *heads;
 
-  fdui->ShipCensusForm = fl_bgn_form(FL_NO_BOX, 560, 240);
-  obj = fl_add_box(FL_UP_BOX,0,0,560,240,"");
-  fdui->ShBrowse = obj = fl_add_browser(FL_SELECT_BROWSER,10,30,540,160,"");
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,ShBrowse_cb,0);
-  obj = fl_add_text(FL_NORMAL_TEXT,10,10,70,20,"Number");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,240,10,30,20,"Class");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,270,10,80,20,"Location");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,350,10,30,20,"Crew");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,380,10,30,20,"Effic");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,80,10,80,20,"Name");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  fdui->Update = obj = fl_add_button(FL_NORMAL_BUTTON,500,200,50,30,"Update");
-    fl_set_button_shortcut(obj,"#U",1);
-    fl_set_object_callback(obj,ShCenUpdate_cb,0);
-  obj = fl_add_text(FL_NORMAL_TEXT,410,10,120,20,"Last Seen");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,160,10,80,20,"Owner");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  fdui->ShCenOkButn = obj = fl_add_button(FL_NORMAL_BUTTON,10,200,50,30,"OK");
-    fl_set_button_shortcut(obj,"#O",1);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,ShCenOk_cb,0);
-  fl_end_form();
+	fdui = g_new0(FD_ShipCensusForm, 1);
+	fdui->ShipCensusForm = ui_window_new("Ship Census", 700, 360);
+	box = vbox_new(8);
+	gtk_container_add(GTK_CONTAINER(fdui->ShipCensusForm), box);
 
-  fdui->ShipCensusForm->fdui = fdui;
+	/* Same layout as the lines built in buildShCensus() */
+	heads = g_strdup_printf("%8s  %8s   %8s    %c   %-10s  %3s %3s %s",
+		"Number", "Name", "Owner", 'C', "Location", "Crw", "Eff",
+		"Last Seen");
+	fdui->ShBrowse = ui_browser_new(TRUE, ShBrowse_cb);
+	gtk_box_pack_start(GTK_BOX(box), browser_with_heads(fdui->ShBrowse, heads),
+		TRUE, TRUE, 0);
+	g_free(heads);
+	gtk_box_pack_start(GTK_BOX(box), ui_label_new(
+		"Click: add ship number to input    Middle-click: add and send    "
+		"Right-click: details"), FALSE, FALSE, 0);
 
-  return fdui;
+	bar = button_bar();
+	fdui->ShCenOkButn = ui_button_new("_OK", G_CALLBACK(ShCenOk_cb), 0);
+	fdui->Update = ui_button_new("_Update", G_CALLBACK(ShCenUpdate_cb), 0);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->ShCenOkButn);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->Update);
+	gtk_box_pack_start(GTK_BOX(box), bar, FALSE, FALSE, 0);
+	return(fdui);
 }
-/*---------------------------------------*/
 
 FD_PlanetCensusForm *create_form_PlanetCensusForm(void)
 {
-  FL_OBJECT *obj;
-  FD_PlanetCensusForm *fdui = (FD_PlanetCensusForm *) fl_calloc(1, sizeof(*fdui));
+	FD_PlanetCensusForm *fdui;
+	GtkWidget *box, *bar;
+	gchar *heads;
 
-  fdui->PlanetCensusForm = fl_bgn_form(FL_NO_BOX, 720, 260);
-  obj = fl_add_box(FL_UP_BOX,0,0,720,260,"");
-  fdui->PlBrowse = obj = fl_add_browser(FL_SELECT_BROWSER,10,30,700,180,"");
-    fl_set_object_callback(obj,PlBrowse_cb,0);
-  obj = fl_add_text(FL_NORMAL_TEXT,10,10,70,20,"Number");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,160,10,80,20,"Owner");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,240,10,30,20,"Class");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,270,10,80,20,"Location");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,350,10,40,20,"Popu");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,390,10,30,20,"Effic");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,570,10,120,20,"Last Seen");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,80,10,80,20,"Name");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,450,10,30,20,"Wat");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,480,10,30,20,"Ore");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,510,10,30,20,"Gold");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,540,10,30,20,"Polut");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  fdui->Update = obj = fl_add_button(FL_NORMAL_BUTTON,660,220,50,30,"Update");
-    fl_set_button_shortcut(obj,"Uu",1);
-    fl_set_object_callback(obj,PlCenUpdate_cb,0);
-  obj = fl_add_text(FL_NORMAL_TEXT,420,10,30,20,"Air");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  fdui->PlCenOkButn = obj = fl_add_button(FL_NORMAL_BUTTON,10,220,50,30,"OK");
-    fl_set_button_shortcut(obj,"#O",1);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,PlCenOk_cb,0);
-  fl_end_form();
+	fdui = g_new0(FD_PlanetCensusForm, 1);
+	fdui->PlanetCensusForm = ui_window_new("Planet Census", 900, 380);
+	box = vbox_new(8);
+	gtk_container_add(GTK_CONTAINER(fdui->PlanetCensusForm), box);
 
-  fdui->PlanetCensusForm->fdui = fdui;
+	/* Same layout as the lines built in buildPlCensus() */
+	heads = g_strdup_printf(
+		"%8s  %8s   %8s    %c   %-10s  %3s  %3s  %3s %3s %3s %3s %3s  %s",
+		"Number", "Name", "Owner", 'C', "Location", "Pop", "Eff", "Air",
+		"Wat", "Ore", "Gld", "Pol", "Last Seen");
+	fdui->PlBrowse = ui_browser_new(TRUE, PlBrowse_cb);
+	gtk_box_pack_start(GTK_BOX(box), browser_with_heads(fdui->PlBrowse, heads),
+		TRUE, TRUE, 0);
+	g_free(heads);
+	gtk_box_pack_start(GTK_BOX(box), ui_label_new(
+		"Click: add planet number to input    Middle-click: add and send    "
+		"Right-click: details"), FALSE, FALSE, 0);
 
-  return fdui;
+	bar = button_bar();
+	fdui->PlCenOkButn = ui_button_new("_OK", G_CALLBACK(PlCenOk_cb), 0);
+	fdui->Update = ui_button_new("_Update", G_CALLBACK(PlCenUpdate_cb), 0);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->PlCenOkButn);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->Update);
+	gtk_box_pack_start(GTK_BOX(box), bar, FALSE, FALSE, 0);
+	return(fdui);
 }
-/*---------------------------------------*/
+
+/* ------------------------------------------------------------------ */
+/* Ship detail                                                        */
+/* ------------------------------------------------------------------ */
 
 FD_ShipDetailForm *create_form_ShipDetailForm(void)
 {
-  FL_OBJECT *obj;
-  FD_ShipDetailForm *fdui = (FD_ShipDetailForm *) fl_calloc(1, sizeof(*fdui));
+	FD_ShipDetailForm *fdui;
+	GtkWidget *box, *top, *right, *frame, *grid, *items, *ibox, *btns, *bar;
+	gchar *heads;
 
-  fdui->ShipDetailForm = fl_bgn_form(FL_NO_BOX, 500, 440);
-  obj = fl_add_box(FL_UP_BOX,0,0,500,440,"");
-  obj = fl_add_box(FL_FRAME_BOX,250,140,230,110,"");
-    fl_set_object_color(obj,FL_WHEAT,FL_COL1);
-  obj = fl_add_box(FL_FRAME_BOX,10,270,360,160,"");
-    fl_set_object_color(obj,FL_WHEAT,FL_COL1);
-  obj = fl_add_text(FL_NORMAL_TEXT,10,10,140,30,"Detailed info for ship:");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  fdui->ShNum = obj = fl_add_text(FL_NORMAL_TEXT,150,10,60,30,"########");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,10,40,470,10,"@line");
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  obj = fl_add_box(FL_FRAME_BOX,10,50,230,200,"");
-    fl_set_object_color(obj,FL_WHEAT,FL_COL1);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,60,210,20,"Status");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,30,80,40,20,"Fuel:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,30,120,40,20,"Armor:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Fuel = obj = fl_add_text(FL_NORMAL_TEXT,70,80,50,20,"######");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Armor = obj = fl_add_text(FL_NORMAL_TEXT,70,120,50,20,"#####");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,140,50,20,"Shields:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,30,160,40,20,"(keep):");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,30,180,40,20,"Air:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,100,50,20,"Energy:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Energy = obj = fl_add_text(FL_NORMAL_TEXT,70,100,50,20,"#####");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,150,80,40,20,"Effic:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Effic = obj = fl_add_text(FL_NORMAL_TEXT,190,80,40,20,"100");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Shields = obj = fl_add_text(FL_NORMAL_TEXT,70,140,50,20,"#####");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->ShKeep = obj = fl_add_text(FL_NORMAL_TEXT,70,160,50,20,"#####");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Air = obj = fl_add_text(FL_NORMAL_TEXT,70,180,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,220,10,60,30,"Owner:");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  fdui->Owner = obj = fl_add_text(FL_NORMAL_TEXT,280,10,80,30,"Owner");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,370,10,30,30,"At:");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  fdui->RowCol = obj = fl_add_text(FL_NORMAL_TEXT,400,10,90,30,"ROW, COL");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,150,100,40,20,"TF:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->TF = obj = fl_add_text(FL_NORMAL_TEXT,190,100,40,20,"TF");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,140,140,50,20,"Eng TF:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Plague = obj = fl_add_text(FL_NORMAL_TEXT,190,180,40,20,"Yes");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,140,120,50,20,"Hull TF:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,150,180,40,20,"Plague:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,140,160,50,20,"Eng Eff:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->HullTF = obj = fl_add_text(FL_NORMAL_TEXT,190,120,40,20,"TF");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->EngTF = obj = fl_add_text(FL_NORMAL_TEXT,190,140,40,20,"TF");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->EngEff = obj = fl_add_text(FL_NORMAL_TEXT,190,160,40,20,"100");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_box(FL_FRAME_BOX,250,50,230,80,"");
-    fl_set_object_color(obj,FL_WHEAT,FL_COL1);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,60,210,20,"Passengers");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,80,40,20,"Civ:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Civ = obj = fl_add_text(FL_NORMAL_TEXT,300,80,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,100,40,20,"Mil:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Mil = obj = fl_add_text(FL_NORMAL_TEXT,300,100,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Sci = obj = fl_add_text(FL_NORMAL_TEXT,430,80,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,390,80,40,20,"Sci:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Ofc = obj = fl_add_text(FL_NORMAL_TEXT,430,100,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,390,100,40,20,"Ofc:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,280,240,20,"Big Items");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->ShDetItem = obj = fl_add_browser(FL_HOLD_BROWSER,20,320,260,100,"");
-    fl_set_object_callback(obj,dummy_cb,0);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,170,40,20,"Torp:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,150,210,20,"Small Cargo");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,190,40,20,"Ore:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,210,40,20,"Bars:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Torp = obj = fl_add_text(FL_NORMAL_TEXT,300,170,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Ore = obj = fl_add_text(FL_NORMAL_TEXT,300,190,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Bars = obj = fl_add_text(FL_NORMAL_TEXT,300,210,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,380,170,50,20,"Air Tnk:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->AirTnk = obj = fl_add_text(FL_NORMAL_TEXT,430,170,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,380,190,50,20,"Fuel  Tnk:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,370,210,60,20,"Available:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->FuelTnk = obj = fl_add_text(FL_NORMAL_TEXT,430,190,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Cargo = obj = fl_add_text(FL_NORMAL_TEXT,430,210,40,20,"######");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,200,60,20,"Last Seen:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Seen = obj = fl_add_text(FL_NORMAL_TEXT,80,200,150,20,"Needs to be able to hold 26");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  fdui->ShDetUpdBtn = obj = fl_add_button(FL_NORMAL_BUTTON,380,270,50,30,"Update");
-    fl_set_button_shortcut(obj,"#U",1);
-    fl_set_object_callback(obj,ShDetUpdBtn_cb,0);
-  fdui->ShDetStatBtn = obj = fl_add_button(FL_NORMAL_BUTTON,380,310,50,30,"Status");
-    fl_set_button_shortcut(obj,"#S",1);
-    fl_set_object_callback(obj,ShDetStatBtn_cb,0);
-  fdui->ShDetCargoBtn = obj = fl_add_button(FL_NORMAL_BUTTON,380,350,50,30,"Cargo");
-    fl_set_button_shortcut(obj,"#C",1);
-    fl_set_object_callback(obj,ShDetCargoBtn_cb,0);
-  fdui->ShDetBigBtn = obj = fl_add_button(FL_NORMAL_BUTTON,380,390,50,30,"Big");
-    fl_set_button_shortcut(obj,"#B",1);
-    fl_set_object_callback(obj,ShDetBigBtn_cb,0);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,300,70,20,"Number");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,90,300,30,20,"Type");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,120,300,30,20,"TF");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,150,300,30,20,"Eff");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,230,300,30,20,"Inst");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  fdui->ShDetInstallBtn = obj = fl_add_button(FL_NORMAL_BUTTON,300,320,50,20,"Install");
-    fl_set_object_callback(obj,ShDetActionBtn_cb,1);
-  fdui->ShDetUninstallBtn = obj = fl_add_button(FL_NORMAL_BUTTON,300,340,50,20,"Uninstall");
-    fl_set_object_callback(obj,ShDetActionBtn_cb,2);
-  fdui->ShDetUnloadBtn = obj = fl_add_button(FL_NORMAL_BUTTON,300,360,50,20,"Unload");
-    fl_set_object_callback(obj,ShDetActionBtn_cb,3);
-  obj = fl_add_text(FL_NORMAL_TEXT,180,300,50,20,"Weight");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  fdui->Where = obj = fl_add_text(FL_NORMAL_TEXT,30,220,170,20,"Needs to be able to hold 26");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  fdui->ShDetOkButn = obj = fl_add_button(FL_NORMAL_BUTTON,440,390,50,30,"OK");
-    fl_set_button_shortcut(obj,"#O",1);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,ShDetOk_cb,0);
-  fl_end_form();
+	fdui = g_new0(FD_ShipDetailForm, 1);
+	fdui->ShipDetailForm = ui_window_new("Detailed Ship Information", -1, -1);
+	box = vbox_new(8);
+	gtk_container_add(GTK_CONTAINER(fdui->ShipDetailForm), box);
 
-  fdui->ShipDetailForm->fdui = fdui;
+	gtk_box_pack_start(GTK_BOX(box), detail_title("Detailed info for ship:",
+		&fdui->ShNum, &fdui->Owner, &fdui->RowCol), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(box),
+		gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
 
-  return fdui;
+	top = hbox_new(8);
+	gtk_box_pack_start(GTK_BOX(box), top, FALSE, FALSE, 0);
+
+	/* Status */
+	frame = frame_grid("Status", &grid);
+	gtk_box_pack_start(GTK_BOX(top), frame, TRUE, TRUE, 0);
+	fdui->Fuel = ui_grid_value(grid, 0, 0, "Fuel:", 6);
+	fdui->Energy = ui_grid_value(grid, 0, 1, "Energy:", 6);
+	fdui->Armor = ui_grid_value(grid, 0, 2, "Armor:", 6);
+	fdui->Shields = ui_grid_value(grid, 0, 3, "Shields:", 6);
+	fdui->ShKeep = ui_grid_value(grid, 0, 4, "(keep):", 6);
+	fdui->Air = ui_grid_value(grid, 0, 5, "Air:", 6);
+	fdui->Effic = ui_grid_value(grid, 2, 0, "Effic:", 4);
+	fdui->TF = ui_grid_value(grid, 2, 1, "TF:", 4);
+	fdui->HullTF = ui_grid_value(grid, 2, 2, "Hull TF:", 4);
+	fdui->EngTF = ui_grid_value(grid, 2, 3, "Eng TF:", 4);
+	fdui->EngEff = ui_grid_value(grid, 2, 4, "Eng Eff:", 4);
+	fdui->Plague = ui_grid_value(grid, 2, 5, "Plague:", 4);
+	gtk_grid_attach(GTK_GRID(grid), ui_label_new("Last seen:"), 0, 6, 1, 1);
+	fdui->Seen = ui_label_new("");
+	gtk_grid_attach(GTK_GRID(grid), fdui->Seen, 1, 6, 3, 1);
+	fdui->Where = ui_label_new("");
+	gtk_grid_attach(GTK_GRID(grid), fdui->Where, 0, 7, 4, 1);
+
+	right = vbox_new(8);
+	gtk_box_pack_start(GTK_BOX(top), right, TRUE, TRUE, 0);
+
+	/* Passengers */
+	frame = frame_grid("Passengers", &grid);
+	gtk_box_pack_start(GTK_BOX(right), frame, FALSE, FALSE, 0);
+	fdui->Civ = ui_grid_value(grid, 0, 0, "Civ:", 5);
+	fdui->Mil = ui_grid_value(grid, 0, 1, "Mil:", 5);
+	fdui->Sci = ui_grid_value(grid, 2, 0, "Sci:", 5);
+	fdui->Ofc = ui_grid_value(grid, 2, 1, "Ofc:", 5);
+
+	/* Small cargo */
+	frame = frame_grid("Small Cargo", &grid);
+	gtk_box_pack_start(GTK_BOX(right), frame, FALSE, FALSE, 0);
+	fdui->Torp = ui_grid_value(grid, 0, 0, "Torp:", 5);
+	fdui->Ore = ui_grid_value(grid, 0, 1, "Ore:", 5);
+	fdui->Bars = ui_grid_value(grid, 0, 2, "Bars:", 5);
+	fdui->AirTnk = ui_grid_value(grid, 2, 0, "Air tnk:", 6);
+	fdui->FuelTnk = ui_grid_value(grid, 2, 1, "Fuel tnk:", 6);
+	fdui->Cargo = ui_grid_value(grid, 2, 2, "Available:", 6);
+
+	/* Big items */
+	items = hbox_new(8);
+	gtk_box_pack_start(GTK_BOX(box), items, TRUE, TRUE, 0);
+	frame = gtk_frame_new("Big Items");
+	gtk_box_pack_start(GTK_BOX(items), frame, TRUE, TRUE, 0);
+	ibox = hbox_new(8);
+	gtk_container_set_border_width(GTK_CONTAINER(ibox), 6);
+	gtk_container_add(GTK_CONTAINER(frame), ibox);
+	/* Same layout as the lines built in buildShDetDisp() */
+	heads = g_strdup_printf("%8s  %c  %3s  %3s  %5s %s", "Number", 'T',
+		"TF", "Eff", "Wght", "Inst");
+	fdui->ShDetItem = ui_browser_new(TRUE, NULL);
+	gtk_widget_set_size_request(ui_browser_widget(fdui->ShDetItem), 300, 120);
+	gtk_box_pack_start(GTK_BOX(ibox), browser_with_heads(fdui->ShDetItem,
+		heads), TRUE, TRUE, 0);
+	g_free(heads);
+	btns = vbox_new(4);
+	gtk_box_pack_start(GTK_BOX(ibox), btns, FALSE, FALSE, 0);
+	fdui->ShDetInstallBtn = ui_button_new("_Install",
+		G_CALLBACK(ShDetActionBtn_cb), 1);
+	fdui->ShDetUninstallBtn = ui_button_new("U_ninstall",
+		G_CALLBACK(ShDetActionBtn_cb), 2);
+	fdui->ShDetUnloadBtn = ui_button_new("Un_load",
+		G_CALLBACK(ShDetActionBtn_cb), 3);
+	gtk_box_pack_start(GTK_BOX(btns), fdui->ShDetInstallBtn, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(btns), fdui->ShDetUninstallBtn, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(btns), fdui->ShDetUnloadBtn, FALSE, FALSE, 0);
+
+	/* Requests to the server */
+	btns = vbox_new(4);
+	gtk_box_pack_start(GTK_BOX(items), btns, FALSE, FALSE, 0);
+	fdui->ShDetUpdBtn = ui_button_new("_Update", G_CALLBACK(ShDetUpdBtn_cb), 0);
+	fdui->ShDetStatBtn = ui_button_new("_Status",
+		G_CALLBACK(ShDetStatBtn_cb), 0);
+	fdui->ShDetCargoBtn = ui_button_new("_Cargo",
+		G_CALLBACK(ShDetCargoBtn_cb), 0);
+	fdui->ShDetBigBtn = ui_button_new("_Big", G_CALLBACK(ShDetBigBtn_cb), 0);
+	gtk_box_pack_start(GTK_BOX(btns), fdui->ShDetUpdBtn, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(btns), fdui->ShDetStatBtn, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(btns), fdui->ShDetCargoBtn, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(btns), fdui->ShDetBigBtn, FALSE, FALSE, 0);
+
+	bar = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
+	gtk_button_box_set_layout(GTK_BUTTON_BOX(bar), GTK_BUTTONBOX_END);
+	fdui->ShDetOkButn = ui_button_new("_OK", G_CALLBACK(ShDetOk_cb), 0);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->ShDetOkButn);
+	gtk_box_pack_start(GTK_BOX(box), bar, FALSE, FALSE, 0);
+	return(fdui);
 }
-/*---------------------------------------*/
+
+/* ------------------------------------------------------------------ */
+/* Planet detail                                                      */
+/* ------------------------------------------------------------------ */
 
 FD_PlanetDetailForm *create_form_PlanetDetailForm(void)
 {
-  FL_OBJECT *obj;
-  FD_PlanetDetailForm *fdui = (FD_PlanetDetailForm *) fl_calloc(1, sizeof(*fdui));
+	FD_PlanetDetailForm *fdui;
+	GtkWidget *box, *row, *col, *frame, *grid, *ibox, *btns, *bar, *hb;
+	gchar *heads;
 
-  fdui->PlanetDetailForm = fl_bgn_form(FL_NO_BOX, 730, 500);
-  obj = fl_add_box(FL_UP_BOX,0,0,730,500,"");
-  obj = fl_add_box(FL_FRAME_BOX,490,70,230,160,"");
-    fl_set_object_color(obj,FL_WHEAT,FL_COL1);
-  obj = fl_add_text(FL_NORMAL_TEXT,500,80,150,20,"Production");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Name = obj = fl_add_input(FL_NORMAL_INPUT,50,30,130,30,"Name:");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,dummy_cb,0);
-  obj = fl_add_box(FL_FRAME_BOX,10,70,230,220,"");
-    fl_set_object_color(obj,FL_WHEAT,FL_COL1);
-  obj = fl_add_text(FL_NORMAL_TEXT,10,10,160,20,"Detailed info for planet:");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->PlNum = obj = fl_add_text(FL_NORMAL_TEXT,170,10,70,20,"########");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,240,10,60,20,"Owner:");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Owner = obj = fl_add_text(FL_NORMAL_TEXT,300,10,80,20,"Owner");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,380,10,30,20,"At:");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  fdui->RowCol = obj = fl_add_text(FL_NORMAL_TEXT,410,10,90,20,"ROW, COL");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,10,60,710,10,"@line");
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  fdui->Seen = obj = fl_add_text(FL_NORMAL_TEXT,80,260,150,20,"Needs to be able to hold 26");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,260,60,20,"Last Seen:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,80,210,20,"Population");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,100,40,20,"Civ:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Civ = obj = fl_add_text(FL_NORMAL_TEXT,60,100,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,120,40,20,"Mil:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Mil = obj = fl_add_text(FL_NORMAL_TEXT,60,120,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Sci = obj = fl_add_text(FL_NORMAL_TEXT,190,100,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,150,100,40,20,"Sci:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Ofc = obj = fl_add_text(FL_NORMAL_TEXT,190,120,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,150,120,40,20,"Ofc:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_box(FL_FRAME_BOX,250,70,230,100,"");
-    fl_set_object_color(obj,FL_WHEAT,FL_COL1);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,100,40,20,"Misl:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,80,210,20,"Commodities");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,140,40,20,"Ore:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Misl = obj = fl_add_text(FL_NORMAL_TEXT,300,100,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Ore = obj = fl_add_text(FL_NORMAL_TEXT,300,140,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,380,100,50,20,"Air Tnk:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->AirTnk = obj = fl_add_text(FL_NORMAL_TEXT,430,100,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,380,120,50,20,"Fuel  Tnk:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->FuelTnk = obj = fl_add_text(FL_NORMAL_TEXT,430,120,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,120,40,20,"Plane:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Plane = obj = fl_add_text(FL_NORMAL_TEXT,300,120,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,390,140,40,20,"Bars:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Bars = obj = fl_add_text(FL_NORMAL_TEXT,430,140,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->PlProdBrowse = obj = fl_add_browser(FL_NORMAL_BROWSER,500,120,210,100,"");
-    fl_set_object_callback(obj,dummy_cb,0);
-  obj = fl_add_text(FL_NORMAL_TEXT,500,100,100,20,"Type");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_box(FL_FRAME_BOX,250,180,230,140,"");
-    fl_set_object_color(obj,FL_WHEAT,FL_COL1);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,190,210,20,"Geographic");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,210,40,20,"Size:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Size = obj = fl_add_text(FL_NORMAL_TEXT,300,210,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,230,40,20,"Effic:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Effic = obj = fl_add_text(FL_NORMAL_TEXT,300,230,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Class = obj = fl_add_text(FL_NORMAL_TEXT,430,210,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,390,210,40,20,"Class:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Polut = obj = fl_add_text(FL_NORMAL_TEXT,430,230,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,390,230,40,20,"Polut:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,250,40,20,"Minrl:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Minerals = obj = fl_add_text(FL_NORMAL_TEXT,300,250,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Gold = obj = fl_add_text(FL_NORMAL_TEXT,430,250,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,390,250,40,20,"Gold:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,270,40,20,"Water:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Water = obj = fl_add_text(FL_NORMAL_TEXT,300,270,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Gas = obj = fl_add_text(FL_NORMAL_TEXT,430,270,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,390,270,40,20,"Gas:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,260,290,40,20,"Mobil:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Mobil = obj = fl_add_text(FL_NORMAL_TEXT,300,290,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Plague = obj = fl_add_text(FL_NORMAL_TEXT,430,290,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,390,290,40,20,"Plague:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,140,40,20,"TchLv:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Tech = obj = fl_add_text(FL_NORMAL_TEXT,60,140,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Research = obj = fl_add_text(FL_NORMAL_TEXT,190,140,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,140,140,50,20,"Res Lv:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,160,40,20,"TF:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->TF = obj = fl_add_text(FL_NORMAL_TEXT,60,160,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->RF = obj = fl_add_text(FL_NORMAL_TEXT,190,160,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,150,160,40,20,"RF:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,200,60,20,"Prev Own:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->PrevOwn = obj = fl_add_text(FL_NORMAL_TEXT,80,200,120,20,"Previous Owner Here");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,220,60,20,"Transfer:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->Transfer = obj = fl_add_text(FL_NORMAL_TEXT,80,220,110,20,"HOSTILE");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,240,70,20,"Owner Relat:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->OwnerRel = obj = fl_add_text(FL_NORMAL_TEXT,90,240,100,20,"*WAR*");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->Checkpoint = obj = fl_add_input(FL_NORMAL_INPUT,320,30,130,30,"Checkpoint:");
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,dummy_cb,0);
-  fdui->NameUpdate = obj = fl_add_button(FL_NORMAL_BUTTON,190,40,30,20,"Upd");
-    fl_set_object_color(obj,FL_INDIANRED,FL_DARKTOMATO);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,NameUpdate_cb,0);
-  fdui->CheckpointUpdate = obj = fl_add_button(FL_NORMAL_BUTTON,460,40,30,20,"Upd");
-    fl_set_object_color(obj,FL_INDIANRED,FL_DARKTOMATO);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,CheckpointUpdate_cb,0);
-  obj = fl_add_text(FL_NORMAL_TEXT,600,100,50,20,"Avail");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,650,100,40,20,"Pct");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,650,80,30,20,"BTU:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->BTU = obj = fl_add_text(FL_NORMAL_TEXT,680,80,30,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_box(FL_FRAME_BOX,10,330,320,160,"");
-    fl_set_object_color(obj,FL_WHEAT,FL_COL1);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,340,240,20,"Big Items");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->PlDetItem = obj = fl_add_browser(FL_HOLD_BROWSER,20,380,230,100,"");
-    fl_set_object_callback(obj,dummy_cb,0);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,360,70,20,"Number");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,90,360,30,20,"Type");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,120,360,30,20,"TF");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,150,360,30,20,"Eff");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  fdui->PlDetRefurbBtn = obj = fl_add_button(FL_NORMAL_BUTTON,260,380,50,20,"Refurb");
-    fl_set_object_callback(obj,PlDetActionBtn_cb,1);
-  obj = fl_add_text(FL_NORMAL_TEXT,180,360,50,20,"Weight");
-    fl_set_object_boxtype(obj,FL_FRAME_BOX);
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,360,330,170,30,"I know this form is ugly,");
-    fl_set_object_lcolor(obj,FL_RED);
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,360,360,170,30,"I'm working on it");
-    fl_set_object_lcolor(obj,FL_RED);
-    fl_set_object_lsize(obj,FL_MEDIUM_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  fdui->PlDetUpdBtn = obj = fl_add_button(FL_NORMAL_BUTTON,490,240,50,30,"Update");
-    fl_set_button_shortcut(obj,"#U",1);
-    fl_set_object_callback(obj,PlDetUpdBtn_cb,0);
-  fdui->PlDetGeoBtn = obj = fl_add_button(FL_NORMAL_BUTTON,550,240,50,30,"Geo");
-    fl_set_button_shortcut(obj,"#G",1);
-    fl_set_object_callback(obj,PlDetGeoBtn_cb,0);
-  fdui->PlDetPopBtn = obj = fl_add_button(FL_NORMAL_BUTTON,610,240,50,30,"Popu");
-    fl_set_button_shortcut(obj,"#P",1);
-    fl_set_object_callback(obj,PlDetPopBtn_cb,0);
-  fdui->PlDetBigBtn = obj = fl_add_button(FL_NORMAL_BUTTON,670,240,50,30,"Big");
-    fl_set_button_shortcut(obj,"#B",1);
-    fl_set_object_callback(obj,PlDetBigBtn_cb,0);
-  obj = fl_add_text(FL_NORMAL_TEXT,20,180,40,20,"PF:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->PF = obj = fl_add_text(FL_NORMAL_TEXT,60,180,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  fdui->PopPct = obj = fl_add_text(FL_NORMAL_TEXT,190,180,40,20,"###");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_BOLD_STYLE);
-  obj = fl_add_text(FL_NORMAL_TEXT,140,180,50,20,"Pop %:");
-    fl_set_object_color(obj,FL_WHEAT,FL_MCOL);
-    fl_set_object_lalign(obj,FL_ALIGN_RIGHT|FL_ALIGN_INSIDE);
-  fdui->PlDetProdBtn = obj = fl_add_button(FL_NORMAL_BUTTON,550,280,50,30,"Prod");
-    fl_set_button_shortcut(obj,"#r",1);
-    fl_set_object_callback(obj,PlDetProdBtn_cb,0);
-  fdui->PlDetDumpBtn = obj = fl_add_button(FL_NORMAL_BUTTON,490,280,50,30,"Dump");
-    fl_set_button_shortcut(obj,"#D",1);
-    fl_set_object_color(obj,FL_INDIANRED,FL_DARKTOMATO);
-    fl_set_object_callback(obj,PlDetDumpBtn_cb,0);
-  fdui->PlDetOkButn = obj = fl_add_button(FL_NORMAL_BUTTON,670,460,50,30,"OK");
-    fl_set_button_shortcut(obj,"#O",1);
-    fl_set_object_resize(obj, FL_RESIZE_NONE);
-    fl_set_object_callback(obj,PlDetOk_cb,0);
-  fl_end_form();
+	fdui = g_new0(FD_PlanetDetailForm, 1);
+	fdui->PlanetDetailForm = ui_window_new("Detailed Planet Information",
+		-1, -1);
+	box = vbox_new(8);
+	gtk_container_add(GTK_CONTAINER(fdui->PlanetDetailForm), box);
 
-  fdui->PlanetDetailForm->fdui = fdui;
+	gtk_box_pack_start(GTK_BOX(box), detail_title("Detailed info for planet:",
+		&fdui->PlNum, &fdui->Owner, &fdui->RowCol), FALSE, FALSE, 0);
 
-  return fdui;
+	/* Name and checkpoint code */
+	row = hbox_new(6);
+	gtk_box_pack_start(GTK_BOX(box), row, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(row), ui_label_new("Name:"), FALSE, FALSE, 0);
+	fdui->Name = ui_entry_new(0, 16);
+	gtk_box_pack_start(GTK_BOX(row), fdui->Name, FALSE, FALSE, 0);
+	fdui->NameUpdate = ui_button_new("Upd", G_CALLBACK(NameUpdate_cb), 0);
+	gtk_widget_set_tooltip_text(fdui->NameUpdate, "Update the planet name");
+	gtk_box_pack_start(GTK_BOX(row), fdui->NameUpdate, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(row), ui_label_new("Checkpoint:"),
+		FALSE, FALSE, 12);
+	fdui->Checkpoint = ui_entry_new(0, 16);
+	gtk_box_pack_start(GTK_BOX(row), fdui->Checkpoint, FALSE, FALSE, 0);
+	fdui->CheckpointUpdate = ui_button_new("Upd",
+		G_CALLBACK(CheckpointUpdate_cb), 0);
+	gtk_widget_set_tooltip_text(fdui->CheckpointUpdate,
+		"Update the checkpoint code");
+	gtk_box_pack_start(GTK_BOX(row), fdui->CheckpointUpdate, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(box),
+		gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
+
+	row = hbox_new(8);
+	gtk_box_pack_start(GTK_BOX(box), row, FALSE, FALSE, 0);
+
+	/* Population */
+	frame = frame_grid("Population", &grid);
+	gtk_box_pack_start(GTK_BOX(row), frame, TRUE, TRUE, 0);
+	fdui->Civ = ui_grid_value(grid, 0, 0, "Civ:", 5);
+	fdui->Mil = ui_grid_value(grid, 0, 1, "Mil:", 5);
+	fdui->Tech = ui_grid_value(grid, 0, 2, "Tech lv:", 5);
+	fdui->TF = ui_grid_value(grid, 0, 3, "TF:", 5);
+	fdui->PF = ui_grid_value(grid, 0, 4, "PF:", 5);
+	fdui->Sci = ui_grid_value(grid, 2, 0, "Sci:", 5);
+	fdui->Ofc = ui_grid_value(grid, 2, 1, "Ofc:", 5);
+	fdui->Research = ui_grid_value(grid, 2, 2, "Res lv:", 5);
+	fdui->RF = ui_grid_value(grid, 2, 3, "RF:", 5);
+	fdui->PopPct = ui_grid_value(grid, 2, 4, "Pop %:", 5);
+	gtk_grid_attach(GTK_GRID(grid), ui_label_new("Prev own:"), 0, 5, 1, 1);
+	fdui->PrevOwn = ui_label_new("");
+	gtk_grid_attach(GTK_GRID(grid), fdui->PrevOwn, 1, 5, 3, 1);
+	gtk_grid_attach(GTK_GRID(grid), ui_label_new("Transfer:"), 0, 6, 1, 1);
+	fdui->Transfer = ui_label_new("");
+	gtk_grid_attach(GTK_GRID(grid), fdui->Transfer, 1, 6, 3, 1);
+	gtk_grid_attach(GTK_GRID(grid), ui_label_new("Owner relat:"), 0, 7, 1, 1);
+	fdui->OwnerRel = ui_label_new("");
+	gtk_grid_attach(GTK_GRID(grid), fdui->OwnerRel, 1, 7, 3, 1);
+	gtk_grid_attach(GTK_GRID(grid), ui_label_new("Last seen:"), 0, 8, 1, 1);
+	fdui->Seen = ui_label_new("");
+	gtk_grid_attach(GTK_GRID(grid), fdui->Seen, 1, 8, 3, 1);
+
+	col = vbox_new(8);
+	gtk_box_pack_start(GTK_BOX(row), col, TRUE, TRUE, 0);
+
+	/* Commodities */
+	frame = frame_grid("Commodities", &grid);
+	gtk_box_pack_start(GTK_BOX(col), frame, FALSE, FALSE, 0);
+	fdui->Misl = ui_grid_value(grid, 0, 0, "Misl:", 5);
+	fdui->Plane = ui_grid_value(grid, 0, 1, "Plane:", 5);
+	fdui->Ore = ui_grid_value(grid, 0, 2, "Ore:", 5);
+	fdui->AirTnk = ui_grid_value(grid, 2, 0, "Air tnk:", 5);
+	fdui->FuelTnk = ui_grid_value(grid, 2, 1, "Fuel tnk:", 5);
+	fdui->Bars = ui_grid_value(grid, 2, 2, "Bars:", 5);
+
+	/* Geographic */
+	frame = frame_grid("Geographic", &grid);
+	gtk_box_pack_start(GTK_BOX(col), frame, FALSE, FALSE, 0);
+	fdui->Size = ui_grid_value(grid, 0, 0, "Size:", 5);
+	fdui->Effic = ui_grid_value(grid, 0, 1, "Effic:", 5);
+	fdui->Minerals = ui_grid_value(grid, 0, 2, "Minrl:", 5);
+	fdui->Water = ui_grid_value(grid, 0, 3, "Water:", 5);
+	fdui->Mobil = ui_grid_value(grid, 0, 4, "Mobil:", 5);
+	fdui->Class = ui_grid_value(grid, 2, 0, "Class:", 5);
+	fdui->Polut = ui_grid_value(grid, 2, 1, "Polut:", 5);
+	fdui->Gold = ui_grid_value(grid, 2, 2, "Gold:", 5);
+	fdui->Gas = ui_grid_value(grid, 2, 3, "Gas:", 5);
+	fdui->Plague = ui_grid_value(grid, 2, 4, "Plague:", 5);
+
+	col = vbox_new(8);
+	gtk_box_pack_start(GTK_BOX(row), col, TRUE, TRUE, 0);
+
+	/* Production */
+	frame = gtk_frame_new("Production");
+	gtk_box_pack_start(GTK_BOX(col), frame, TRUE, TRUE, 0);
+	ibox = vbox_new(4);
+	gtk_container_set_border_width(GTK_CONTAINER(ibox), 6);
+	gtk_container_add(GTK_CONTAINER(frame), ibox);
+	hb = hbox_new(6);
+	gtk_box_pack_start(GTK_BOX(ibox), hb, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hb), ui_label_new("BTU:"), FALSE, FALSE, 0);
+	fdui->BTU = ui_label_new("");
+	gtk_box_pack_start(GTK_BOX(hb), fdui->BTU, FALSE, FALSE, 0);
+	/* Same layout as the lines built in buildPlDetDisp() */
+	heads = g_strdup_printf("%11s   %5s   %3s", "Type", "Avail", "Pct");
+	fdui->PlProdBrowse = ui_browser_new(TRUE, NULL);
+	ui_browser_set_selectable(fdui->PlProdBrowse, FALSE);
+	gtk_widget_set_size_request(ui_browser_widget(fdui->PlProdBrowse),
+		240, 120);
+	gtk_box_pack_start(GTK_BOX(ibox), browser_with_heads(fdui->PlProdBrowse,
+		heads), TRUE, TRUE, 0);
+	g_free(heads);
+
+	/* Requests to the server */
+	btns = gtk_grid_new();
+	gtk_grid_set_column_spacing(GTK_GRID(btns), 4);
+	gtk_grid_set_row_spacing(GTK_GRID(btns), 4);
+	gtk_grid_set_column_homogeneous(GTK_GRID(btns), TRUE);
+	gtk_box_pack_start(GTK_BOX(col), btns, FALSE, FALSE, 0);
+	fdui->PlDetUpdBtn = ui_button_new("_Update", G_CALLBACK(PlDetUpdBtn_cb), 0);
+	fdui->PlDetGeoBtn = ui_button_new("_Geo", G_CALLBACK(PlDetGeoBtn_cb), 0);
+	fdui->PlDetPopBtn = ui_button_new("_Popu", G_CALLBACK(PlDetPopBtn_cb), 0);
+	fdui->PlDetBigBtn = ui_button_new("_Big", G_CALLBACK(PlDetBigBtn_cb), 0);
+	fdui->PlDetDumpBtn = ui_button_new("_Dump", G_CALLBACK(PlDetDumpBtn_cb), 0);
+	fdui->PlDetProdBtn = ui_button_new("P_rod", G_CALLBACK(PlDetProdBtn_cb), 0);
+	gtk_grid_attach(GTK_GRID(btns), fdui->PlDetUpdBtn, 0, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(btns), fdui->PlDetGeoBtn, 1, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(btns), fdui->PlDetPopBtn, 2, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(btns), fdui->PlDetBigBtn, 3, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(btns), fdui->PlDetDumpBtn, 0, 1, 1, 1);
+	gtk_grid_attach(GTK_GRID(btns), fdui->PlDetProdBtn, 1, 1, 1, 1);
+
+	/* Big items */
+	row = hbox_new(8);
+	gtk_box_pack_start(GTK_BOX(box), row, TRUE, TRUE, 0);
+	frame = gtk_frame_new("Big Items");
+	gtk_box_pack_start(GTK_BOX(row), frame, TRUE, TRUE, 0);
+	ibox = hbox_new(8);
+	gtk_container_set_border_width(GTK_CONTAINER(ibox), 6);
+	gtk_container_add(GTK_CONTAINER(frame), ibox);
+	/* Same layout as the lines built in buildPlDetDisp() */
+	heads = g_strdup_printf("%8s  %c  %3s  %3s  %5s", "Number", 'T', "TF",
+		"Eff", "Wght");
+	fdui->PlDetItem = ui_browser_new(TRUE, NULL);
+	gtk_widget_set_size_request(ui_browser_widget(fdui->PlDetItem), 300, 120);
+	gtk_box_pack_start(GTK_BOX(ibox), browser_with_heads(fdui->PlDetItem,
+		heads), TRUE, TRUE, 0);
+	g_free(heads);
+	btns = vbox_new(4);
+	gtk_box_pack_start(GTK_BOX(ibox), btns, FALSE, FALSE, 0);
+	fdui->PlDetRefurbBtn = ui_button_new("Re_furb",
+		G_CALLBACK(PlDetActionBtn_cb), 1);
+	gtk_box_pack_start(GTK_BOX(btns), fdui->PlDetRefurbBtn, FALSE, FALSE, 0);
+
+	bar = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
+	gtk_button_box_set_layout(GTK_BUTTON_BOX(bar), GTK_BUTTONBOX_END);
+	fdui->PlDetOkButn = ui_button_new("_OK", G_CALLBACK(PlDetOk_cb), 0);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->PlDetOkButn);
+	gtk_box_pack_start(GTK_BOX(box), bar, FALSE, FALSE, 0);
+	return(fdui);
 }
-/*---------------------------------------*/
 
-FD_PowerRptForm *create_form_PowerRptForm(void)
-{
-  FL_OBJECT *obj;
-  FD_PowerRptForm *fdui = (FD_PowerRptForm *) fl_calloc(1, sizeof(*fdui));
-
-  fdui->PowerRptForm = fl_bgn_form(FL_NO_BOX, 380, 230);
-  obj = fl_add_box(FL_UP_BOX,0,0,380,230,"");
-  obj = fl_add_text(FL_NORMAL_TEXT,10,10,360,40,"Current Power Report");
-    fl_set_object_lcolor(obj,FL_BLUE);
-    fl_set_object_lsize(obj,FL_HUGE_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_CENTER|FL_ALIGN_INSIDE);
-    fl_set_object_lstyle(obj,FL_NORMAL_STYLE+FL_EMBOSSED_STYLE);
-  fl_end_form();
-
-  fdui->PowerRptForm->fdui = fdui;
-
-  return fdui;
-}
-/*---------------------------------------*/
-
-FD_MinerCensusForm *create_form_MinerCensusForm(void)
-{
-  FL_OBJECT *obj;
-  FD_MinerCensusForm *fdui = (FD_MinerCensusForm *) fl_calloc(1, sizeof(*fdui));
-
-  fdui->MinerCensusForm = fl_bgn_form(FL_NO_BOX, 380, 230);
-  obj = fl_add_box(FL_UP_BOX,0,0,380,230,"");
-  obj = fl_add_browser(FL_NORMAL_BROWSER,10,50,360,170,"");
-  fl_end_form();
-
-  fdui->MinerCensusForm->fdui = fdui;
-
-  return fdui;
-}
-/*---------------------------------------*/
-
-FD_DebugOutputForm *create_form_DebugOutputForm(void)
-{
-  FL_OBJECT *obj;
-  FD_DebugOutputForm *fdui = (FD_DebugOutputForm *) fl_calloc(1, sizeof(*fdui));
-
-  fdui->DebugOutputForm = fl_bgn_form(FL_NO_BOX, 380, 230);
-  obj = fl_add_box(FL_UP_BOX,0,0,380,230,"");
-  obj = fl_add_browser(FL_NORMAL_BROWSER,10,40,360,160,"");
-  fl_end_form();
-
-  fdui->DebugOutputForm->fdui = fdui;
-
-  return fdui;
-}
-/*---------------------------------------*/
-
-FD_LocalEditorForm *create_form_LocalEditorForm(void)
-{
-  FL_OBJECT *obj;
-  FD_LocalEditorForm *fdui = (FD_LocalEditorForm *) fl_calloc(1, sizeof(*fdui));
-
-  fdui->LocalEditorForm = fl_bgn_form(FL_NO_BOX, 380, 230);
-  obj = fl_add_box(FL_UP_BOX,0,0,380,230,"");
-  obj = fl_add_text(FL_NORMAL_TEXT,50,30,270,50,"This will be a form to handle local message composition");
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  fl_end_form();
-
-  fdui->LocalEditorForm->fdui = fdui;
-
-  return fdui;
-}
-/*---------------------------------------*/
-
-FD_Dummy1Form *create_form_Dummy1Form(void)
-{
-  FL_OBJECT *obj;
-  FD_Dummy1Form *fdui = (FD_Dummy1Form *) fl_calloc(1, sizeof(*fdui));
-
-  fdui->Dummy1Form = fl_bgn_form(FL_NO_BOX, 380, 230);
-  obj = fl_add_box(FL_UP_BOX,0,0,380,230,"");
-  fl_end_form();
-
-  fdui->Dummy1Form->fdui = fdui;
-
-  return fdui;
-}
-/*---------------------------------------*/
-
-FD_Dummy2Form *create_form_Dummy2Form(void)
-{
-  FL_OBJECT *obj;
-  FD_Dummy2Form *fdui = (FD_Dummy2Form *) fl_calloc(1, sizeof(*fdui));
-
-  fdui->Dummy2Form = fl_bgn_form(FL_NO_BOX, 380, 230);
-  obj = fl_add_box(FL_UP_BOX,0,0,380,230,"");
-  fl_end_form();
-
-  fdui->Dummy2Form->fdui = fdui;
-
-  return fdui;
-}
-/*---------------------------------------*/
-
-FD_Dummy3Form *create_form_Dummy3Form(void)
-{
-  FL_OBJECT *obj;
-  FD_Dummy3Form *fdui = (FD_Dummy3Form *) fl_calloc(1, sizeof(*fdui));
-
-  fdui->Dummy3Form = fl_bgn_form(FL_NO_BOX, 380, 230);
-  obj = fl_add_box(FL_UP_BOX,0,0,380,230,"");
-  fl_end_form();
-
-  fdui->Dummy3Form->fdui = fdui;
-
-  return fdui;
-}
-/*---------------------------------------*/
-
-FD_Dummy4Form *create_form_Dummy4Form(void)
-{
-  FL_OBJECT *obj;
-  FD_Dummy4Form *fdui = (FD_Dummy4Form *) fl_calloc(1, sizeof(*fdui));
-
-  fdui->Dummy4Form = fl_bgn_form(FL_NO_BOX, 380, 230);
-  obj = fl_add_box(FL_UP_BOX,0,0,380,230,"");
-  fl_end_form();
-
-  fdui->Dummy4Form->fdui = fdui;
-
-  return fdui;
-}
-/*---------------------------------------*/
-
-FD_Dummy5Form *create_form_Dummy5Form(void)
-{
-  FL_OBJECT *obj;
-  FD_Dummy5Form *fdui = (FD_Dummy5Form *) fl_calloc(1, sizeof(*fdui));
-
-  fdui->Dummy5Form = fl_bgn_form(FL_NO_BOX, 380, 230);
-  obj = fl_add_box(FL_UP_BOX,0,0,380,230,"");
-  fl_end_form();
-
-  fdui->Dummy5Form->fdui = fdui;
-
-  return fdui;
-}
-/*---------------------------------------*/
+/* ------------------------------------------------------------------ */
+/* Help                                                               */
+/* ------------------------------------------------------------------ */
 
 FD_HelpForm *create_form_HelpForm(void)
 {
-  FL_OBJECT *obj;
-  FD_HelpForm *fdui = (FD_HelpForm *) fl_calloc(1, sizeof(*fdui));
+	FD_HelpForm *fdui;
+	GtkWidget *box, *bar;
 
-  fdui->HelpForm = fl_bgn_form(FL_NO_BOX, 570, 390);
-  obj = fl_add_box(FL_UP_BOX,0,0,570,390,"");
-  fdui->Help_Browser = obj = fl_add_browser(FL_NORMAL_BROWSER,10,10,550,330,"");
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_callback(obj,dummy_cb,0);
-  fdui->OkBtn = obj = fl_add_button(FL_NORMAL_BUTTON,240,350,50,30,"Ok!");
-    fl_set_button_shortcut(obj,"Oo",1);
-    fl_set_object_callback(obj,HelpOk_cb,0);
-  fl_end_form();
-
-  fdui->HelpForm->fdui = fdui;
-
-  return fdui;
+	fdui = g_new0(FD_HelpForm, 1);
+	fdui->HelpForm = ui_window_new("Help for ImpFE", 680, 480);
+	box = vbox_new(8);
+	gtk_container_add(GTK_CONTAINER(fdui->HelpForm), box);
+	fdui->Help_Browser = ui_browser_new(FALSE, NULL);
+	ui_browser_set_selectable(fdui->Help_Browser, FALSE);
+	ui_browser_set_wrap(fdui->Help_Browser);
+	gtk_widget_set_size_request(ui_browser_widget(fdui->Help_Browser), 400, 200);
+	gtk_box_pack_start(GTK_BOX(box), ui_browser_widget(fdui->Help_Browser),
+		TRUE, TRUE, 0);
+	bar = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
+	gtk_button_box_set_layout(GTK_BUTTON_BOX(bar), GTK_BUTTONBOX_CENTER);
+	fdui->OkBtn = ui_button_new("_OK", G_CALLBACK(HelpOk_cb), 0);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->OkBtn);
+	gtk_box_pack_start(GTK_BOX(box), bar, FALSE, FALSE, 0);
+	return(fdui);
 }
-/*---------------------------------------*/
+
+/* ------------------------------------------------------------------ */
+/* Command queue                                                      */
+/* ------------------------------------------------------------------ */
 
 FD_CommandForm *create_form_CommandForm(void)
 {
-  FL_OBJECT *obj;
-  FD_CommandForm *fdui = (FD_CommandForm *) fl_calloc(1, sizeof(*fdui));
+	FD_CommandForm *fdui;
+	GtkWidget *box, *grid, *bar;
+	gchar *heads;
 
-  fdui->CommandForm = fl_bgn_form(FL_NO_BOX, 370, 330);
-  obj = fl_add_box(FL_UP_BOX,0,0,370,330,"");
-  obj = fl_add_box(FL_UP_BOX,0,0,370,40,"");
-  fdui->CmdsHelpMenu = obj = fl_add_menu(FL_PULLDOWN_MENU,320,10,40,20,"Help");
-    fl_set_object_shortcut(obj,"#H",1);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_callback(obj,CmdsHelpMenu_cb,0);
-  fdui->CmdsBrowser = obj = fl_add_browser(FL_HOLD_BROWSER,10,70,350,130,"");
-    fl_set_object_callback(obj,CmdsBrowser_cb,0);
-  obj = fl_add_text(FL_NORMAL_TEXT,10,50,40,20,"Num");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,50,50,220,20,"Description");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  obj = fl_add_text(FL_NORMAL_TEXT,270,50,60,20,"Priority");
-    fl_set_object_boxtype(obj,FL_BORDER_BOX);
-    fl_set_object_lsize(obj,FL_NORMAL_SIZE);
-    fl_set_object_lalign(obj,FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-  fdui->CmdsKillBtn = obj = fl_add_button(FL_NORMAL_BUTTON,10,10,60,20,"Kill");
-    fl_set_button_shortcut(obj,"#K",1);
-    fl_set_object_color(obj,FL_INDIANRED,FL_DARKTOMATO);
-    fl_set_object_callback(obj,CmdsKillBtn_cb,0);
-  fdui->CmdsDoneBtn = obj = fl_add_button(FL_NORMAL_BUTTON,10,290,60,30,"Ok");
-    fl_set_button_shortcut(obj,"#O",1);
-    fl_set_object_callback(obj,CmdsDoneBtn_cb,0);
-  fdui->CmdsPauseBtn = obj = fl_add_button(FL_NORMAL_BUTTON,300,290,60,30,"Pause");
-    fl_set_button_shortcut(obj,"#P",1);
-    fl_set_object_callback(obj,CmdsPauseBtn_cb,0);
-  fdui->CmdsAddBtn = obj = fl_add_button(FL_NORMAL_BUTTON,150,250,60,20,"Add");
-    fl_set_button_shortcut(obj,"#A",1);
-    fl_set_object_callback(obj,CmdsAddBtn_cb,0);
-  fdui->CmdsCmd = obj = fl_add_input(FL_NORMAL_INPUT,60,210,300,30,"Command");
-    fl_set_object_callback(obj,dummy_cb,0);
-  fdui->CmdsPriorBtn = obj = fl_add_choice(FL_NORMAL_CHOICE2,60,250,80,30,"Priority");
-    fl_set_object_callback(obj,dummy_cb,0);
-  fdui->CmdsModBtn = obj = fl_add_button(FL_NORMAL_BUTTON,220,250,60,20,"Modify");
-    fl_set_button_shortcut(obj,"#M",1);
-    fl_set_object_callback(obj,CmdsModBtn_cb,0);
-  fl_end_form();
+	fdui = g_new0(FD_CommandForm, 1);
+	fdui->CommandForm = ui_window_new("Queued Commands", 480, 400);
+	box = vbox_new(8);
+	gtk_container_add(GTK_CONTAINER(fdui->CommandForm), box);
 
-  fdui->CommandForm->fdui = fdui;
+	/* Same layout as the lines built in buildCmdList() */
+	heads = g_strdup_printf("%3s  %-30s  %s", "Num", "Command", "Priority");
+	fdui->CmdsBrowser = ui_browser_new(TRUE, CmdsBrowser_cb);
+	gtk_box_pack_start(GTK_BOX(box), browser_with_heads(fdui->CmdsBrowser,
+		heads), TRUE, TRUE, 0);
+	g_free(heads);
 
-  return fdui;
+	grid = grid_new();
+	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
+	gtk_box_pack_start(GTK_BOX(box), grid, FALSE, FALSE, 0);
+	gtk_grid_attach(GTK_GRID(grid), ui_label_new("Command"), 0, 0, 1, 1);
+	fdui->CmdsCmd = ui_entry_new(256, 0);
+	gtk_style_context_add_class(gtk_widget_get_style_context(fdui->CmdsCmd),
+		"mono");
+	gtk_widget_set_tooltip_text(fdui->CmdsCmd,
+		"Use ~ to separate the lines of a multi-line command");
+	gtk_widget_set_hexpand(fdui->CmdsCmd, TRUE);
+	gtk_grid_attach(GTK_GRID(grid), fdui->CmdsCmd, 1, 0, 3, 1);
+	gtk_grid_attach(GTK_GRID(grid), ui_label_new("Priority"), 0, 1, 1, 1);
+	fdui->CmdsPriorBtn = ui_choice_new();
+	gtk_grid_attach(GTK_GRID(grid), fdui->CmdsPriorBtn, 1, 1, 1, 1);
+	fdui->CmdsAddBtn = ui_button_new("_Add", G_CALLBACK(CmdsAddBtn_cb), 0);
+	gtk_grid_attach(GTK_GRID(grid), fdui->CmdsAddBtn, 2, 1, 1, 1);
+	fdui->CmdsModBtn = ui_button_new("_Modify", G_CALLBACK(CmdsModBtn_cb), 0);
+	gtk_grid_attach(GTK_GRID(grid), fdui->CmdsModBtn, 3, 1, 1, 1);
+
+	bar = button_bar();
+	fdui->CmdsDoneBtn = ui_button_new("_OK", G_CALLBACK(CmdsDoneBtn_cb), 0);
+	fdui->CmdsKillBtn = ui_button_new("_Kill", G_CALLBACK(CmdsKillBtn_cb), 0);
+	gtk_widget_set_tooltip_text(fdui->CmdsKillBtn,
+		"Remove the selected command from the queue");
+	fdui->CmdsPauseBtn = ui_button_new("_Pause", G_CALLBACK(CmdsPauseBtn_cb), 0);
+	gtk_widget_set_tooltip_text(fdui->CmdsPauseBtn,
+		"Stop or restart running queued commands");
+	gtk_container_add(GTK_CONTAINER(bar), fdui->CmdsDoneBtn);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->CmdsKillBtn);
+	gtk_container_add(GTK_CONTAINER(bar), fdui->CmdsPauseBtn);
+	gtk_box_pack_start(GTK_BOX(box), bar, FALSE, FALSE, 0);
+	return(fdui);
 }
-/*---------------------------------------*/
-

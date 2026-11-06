@@ -1,6 +1,10 @@
 Changes by date
 ===============
 
+=20261106=
+* Converted the GUI from XForms to GTK 3
+* Replaced autoconf with a plain Makefile (Linux only)
+* Fixed a buffer overflow that crashed the planet census
 =20150706=
 bumped max players to 254
 =20150530=

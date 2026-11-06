@@ -60,76 +60,19 @@
 #define MAIN_HELP_MENU_ABOUT	2
 
 /* Form Defs */
-#ifndef BUILDING_MAIN
-extern
+#ifdef BUILDING_MAIN
+#define GUI_EXTERN
+#else
+#define GUI_EXTERN extern
 #endif
-   FD_ImpFeMain *fd_ImpFeMain;
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_ImpFeAbout *fd_ImpFeAbout;
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_MapForm *fd_MapForm;
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_TasksForm *fd_TasksForm;
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_ServCfgForm *fd_ServCfgForm;
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_ShipCensusForm *fd_ShipCensusForm;
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_PlanetCensusForm *fd_PlanetCensusForm;
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_ShipDetailForm *fd_ShipDetailForm;
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_PlanetDetailForm *fd_PlanetDetailForm;
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_PowerRptForm *fd_PowerRptForm;
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_MinerCensusForm *fd_MinerCensusForm;
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_DebugOutputForm *fd_DebugOutputForm;
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_LocalEditorForm *fd_LocalEditorForm;
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_HelpForm *fd_HelpForm; /* The Dummy* forms should be renamed as */
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_CommandForm *fd_CommandForm; /* they are used - this is easier than   */
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_Dummy3Form *fd_Dummy3Form; /* just adding new ones sine I can do a  */
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_Dummy4Form *fd_Dummy4Form; /* global search & replace               */
-#ifndef BUILDING_MAIN
-extern
-#endif
-   FD_Dummy5Form *fd_Dummy5Form;
-
+GUI_EXTERN FD_ImpFeMain *fd_ImpFeMain;
+GUI_EXTERN FD_ImpFeAbout *fd_ImpFeAbout;
+GUI_EXTERN FD_MapForm *fd_MapForm;
+GUI_EXTERN FD_TasksForm *fd_TasksForm;
+GUI_EXTERN FD_ServCfgForm *fd_ServCfgForm;
+GUI_EXTERN FD_ShipCensusForm *fd_ShipCensusForm;
+GUI_EXTERN FD_PlanetCensusForm *fd_PlanetCensusForm;
+GUI_EXTERN FD_ShipDetailForm *fd_ShipDetailForm;
+GUI_EXTERN FD_PlanetDetailForm *fd_PlanetDetailForm;
+GUI_EXTERN FD_HelpForm *fd_HelpForm;
+GUI_EXTERN FD_CommandForm *fd_CommandForm;

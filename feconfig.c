@@ -47,7 +47,6 @@ static char rcsid[]="$Id: feconfig.c,v 1.4 2000/05/26 23:38:55 marisa Exp $";
 #else
 #include <strings.h>
 #endif
-#include "forms.h"
 #include "impfe.h"
 #include "ImpFeGui.h"
 #include "ImpFeMess.h"
@@ -245,9 +244,9 @@ void handleLine(void)
 	    return;
 	}
 	CfgParseErr=TRUE;
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, "Unknown config file keyword '");
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, KeyWord);
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, "'\n");
+	ui_browser_append(fd_ImpFeMain->MainBrowser, "Unknown config file keyword '");
+	ui_browser_append(fd_ImpFeMain->MainBrowser, KeyWord);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, "'\n");
 }
 
 /*
@@ -292,55 +291,55 @@ void handleOpenCfg(void)
 	const char *selFile; /* File name they selected */
 	FePlanet_t tmpPlanet;
 
-	fl_set_fselector_title("Open ImpFE Database");
-	if ((selFile = fl_show_fselector("Select a file to open", "", "*.fe",
+	if ((selFile = ui_file_select(fd_ImpFeMain->ImpFeMain,
+									 "Open ImpFE Database", FALSE, "*.fe",
 									 DEF_CFG_NAME)) == NULL)
 	{
 		/* They pressed cancel... */
 		return;
 	}
 	/* Set the directory */
-	chdir(fl_get_directory());
+	chdir(ui_last_directory());
 	/* Copy out the file name */
 	strncpy(PickedFile, selFile, 255);
 	/* Try to open the config file */
 	if ((CfgHndl=fopen(PickedFile, "r")) == NULL)
 	{
 	    /* Open failed */
-	    fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, "*** Open of config file ");
-	    fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, PickedFile);
-	    fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, " for reading failed\n");
+	    ui_browser_append(fd_ImpFeMain->MainBrowser, "*** Open of config file ");
+	    ui_browser_append(fd_ImpFeMain->MainBrowser, PickedFile);
+	    ui_browser_append(fd_ImpFeMain->MainBrowser, " for reading failed\n");
 	    return;
 	}
 	if (parseConfig())
 	{
 	    if (openFeDBs(FALSE))
 	    {
-			fl_set_menu_item_mode(fd_ImpFeMain->MainFileMenu,
-								  MAIN_FILE_MENU_OPEN, FL_PUP_GREY);
-			fl_set_menu_item_mode(fd_ImpFeMain->MainFileMenu,
-								  MAIN_FILE_MENU_NEW, FL_PUP_GREY);
-			fl_set_menu_item_mode(fd_ImpFeMain->MainFileMenu,
-								  MAIN_FILE_MENU_SAVE, FL_PUP_NONE);
-			fl_set_menu_item_mode(fd_ImpFeMain->MainFileMenu,
-								  MAIN_FILE_MENU_CLOSE, FL_PUP_NONE);
+			ui_menu_enable(fd_ImpFeMain->MainFileMenu,
+								  MAIN_FILE_MENU_OPEN, FALSE);
+			ui_menu_enable(fd_ImpFeMain->MainFileMenu,
+								  MAIN_FILE_MENU_NEW, FALSE);
+			ui_menu_enable(fd_ImpFeMain->MainFileMenu,
+								  MAIN_FILE_MENU_SAVE, TRUE);
+			ui_menu_enable(fd_ImpFeMain->MainFileMenu,
+								  MAIN_FILE_MENU_CLOSE, TRUE);
 			/* Server menu options */
-			fl_set_menu_item_mode(fd_ImpFeMain->MainServerMenu,
-								  MAIN_SERVER_MENU_OPEN, FL_PUP_NONE);
+			ui_menu_enable(fd_ImpFeMain->MainServerMenu,
+								  MAIN_SERVER_MENU_OPEN, TRUE);
 			/* View menu options */
-			fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-								  MAIN_VIEW_MENU_MAP, FL_PUP_NONE);
-			fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-								  MAIN_VIEW_MENU_PLANET, FL_PUP_NONE);
-			fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-								  MAIN_VIEW_MENU_SHIP, FL_PUP_NONE);
-			fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-								  MAIN_VIEW_MENU_SCRIPTS, FL_PUP_NONE);
-			fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-								  MAIN_VIEW_MENU_CMDS, FL_PUP_NONE);
+			ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+								  MAIN_VIEW_MENU_MAP, TRUE);
+			ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+								  MAIN_VIEW_MENU_PLANET, TRUE);
+			ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+								  MAIN_VIEW_MENU_SHIP, TRUE);
+			ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+								  MAIN_VIEW_MENU_SCRIPTS, TRUE);
+			ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+								  MAIN_VIEW_MENU_CMDS, TRUE);
 			/* Configmenu options */
-			fl_set_menu_item_mode(fd_ImpFeMain->MainConfigMenu,
-								  MAIN_CONFIG_MENU_HOST, FL_PUP_NONE);
+			ui_menu_enable(fd_ImpFeMain->MainConfigMenu,
+								  MAIN_CONFIG_MENU_HOST, TRUE);
 
 			loadCmdQueue();
 			fe_puts("*** Configuration file loaded\n");
@@ -429,14 +428,14 @@ void handleSaveCfg(void)
 	    return;
 	}
 	/* Set the directory */
-	chdir(fl_get_directory());
+	chdir(ui_last_directory());
 	/* Try to open the config file */
 	if ((CfgHndl=fopen(PickedFile, "w")) == NULL)
 	{
 	    /* Open failed */
-	    fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, "*** Open of config file ");
-	    fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, PickedFile);
-	    fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, " for writing failed\n");
+	    ui_browser_append(fd_ImpFeMain->MainBrowser, "*** Open of config file ");
+	    ui_browser_append(fd_ImpFeMain->MainBrowser, PickedFile);
+	    ui_browser_append(fd_ImpFeMain->MainBrowser, " for writing failed\n");
 	    return;
 	}
 	saveConfig();
@@ -452,23 +451,23 @@ void handleNewCfg(void)
 {
 	const char *selFile; /* File name they selected */
 
-	fl_set_fselector_title("Create a NEW ImpFE Database");
-	if ((selFile = fl_show_fselector("Enter a file name to create. End it in .fe", "", "*.fe", "default.fe")) == NULL)
+	if ((selFile = ui_file_select(fd_ImpFeMain->ImpFeMain,
+		"Create a NEW ImpFE Database", TRUE, "*.fe", "default.fe")) == NULL)
 	{
 		/* They pressed cancel... */
 		return;
 	}
 	/* Set the directory */
-	chdir(fl_get_directory());
+	chdir(ui_last_directory());
 	/* Copy out the file name */
 	strncpy(PickedFile, selFile, 255);
 	/* Try to open the config file */
 	if ((CfgHndl=fopen(PickedFile, "w")) == NULL)
 	{
 	    /* Open failed */
-	    fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, "*** Open of config file ");
-	    fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, PickedFile);
-	    fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, " for writing failed\n");
+	    ui_browser_append(fd_ImpFeMain->MainBrowser, "*** Open of config file ");
+	    ui_browser_append(fd_ImpFeMain->MainBrowser, PickedFile);
+	    ui_browser_append(fd_ImpFeMain->MainBrowser, " for writing failed\n");
 	    return;
 	}
 	/* Note we do not care if there were any file contents in here */
@@ -479,31 +478,31 @@ void handleNewCfg(void)
 	/* Attempt to create & open the database files */
 	if (openFeDBs(TRUE))
 	{
-		fl_set_menu_item_mode(fd_ImpFeMain->MainFileMenu,
-							  MAIN_FILE_MENU_OPEN, FL_PUP_GREY);
-		fl_set_menu_item_mode(fd_ImpFeMain->MainFileMenu,
-							  MAIN_FILE_MENU_NEW, FL_PUP_GREY);
-		fl_set_menu_item_mode(fd_ImpFeMain->MainFileMenu,
-							  MAIN_FILE_MENU_SAVE, FL_PUP_NONE);
-		fl_set_menu_item_mode(fd_ImpFeMain->MainFileMenu,
-							  MAIN_FILE_MENU_CLOSE, FL_PUP_NONE);
+		ui_menu_enable(fd_ImpFeMain->MainFileMenu,
+							  MAIN_FILE_MENU_OPEN, FALSE);
+		ui_menu_enable(fd_ImpFeMain->MainFileMenu,
+							  MAIN_FILE_MENU_NEW, FALSE);
+		ui_menu_enable(fd_ImpFeMain->MainFileMenu,
+							  MAIN_FILE_MENU_SAVE, TRUE);
+		ui_menu_enable(fd_ImpFeMain->MainFileMenu,
+							  MAIN_FILE_MENU_CLOSE, TRUE);
 		/* Server menu options */
-		fl_set_menu_item_mode(fd_ImpFeMain->MainServerMenu,
-							  MAIN_SERVER_MENU_OPEN, FL_PUP_NONE);
+		ui_menu_enable(fd_ImpFeMain->MainServerMenu,
+							  MAIN_SERVER_MENU_OPEN, TRUE);
 		/* View menu options */
-		fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-							  MAIN_VIEW_MENU_MAP, FL_PUP_NONE);
-		fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-							  MAIN_VIEW_MENU_PLANET, FL_PUP_NONE);
-		fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-							  MAIN_VIEW_MENU_SHIP, FL_PUP_NONE);
-		fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-							  MAIN_VIEW_MENU_SCRIPTS, FL_PUP_NONE);
-		fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-							  MAIN_VIEW_MENU_CMDS, FL_PUP_NONE);
+		ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+							  MAIN_VIEW_MENU_MAP, TRUE);
+		ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+							  MAIN_VIEW_MENU_PLANET, TRUE);
+		ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+							  MAIN_VIEW_MENU_SHIP, TRUE);
+		ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+							  MAIN_VIEW_MENU_SCRIPTS, TRUE);
+		ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+							  MAIN_VIEW_MENU_CMDS, TRUE);
 		/* Configmenu options */
-		fl_set_menu_item_mode(fd_ImpFeMain->MainConfigMenu,
-							  MAIN_CONFIG_MENU_HOST, FL_PUP_NONE);
+		ui_menu_enable(fd_ImpFeMain->MainConfigMenu,
+							  MAIN_CONFIG_MENU_HOST, TRUE);
 
 		addCmd("info\n", QUE_IMMEDIATE);
 		addCmd("race\n", QUE_IMMEDIATE);
@@ -521,38 +520,38 @@ void handleCloseCfg(void)
 {
 	saveCmdQueue();
 	closeFeDBs();
-	fl_set_menu_item_mode(fd_ImpFeMain->MainFileMenu,
-						  MAIN_FILE_MENU_OPEN, FL_PUP_NONE);
-	fl_set_menu_item_mode(fd_ImpFeMain->MainFileMenu,
-						  MAIN_FILE_MENU_NEW, FL_PUP_NONE);
-	fl_set_menu_item_mode(fd_ImpFeMain->MainFileMenu,
-						  MAIN_FILE_MENU_SAVE, FL_PUP_GREY);
-	fl_set_menu_item_mode(fd_ImpFeMain->MainFileMenu,
-						  MAIN_FILE_MENU_CLOSE, FL_PUP_GREY);
+	ui_menu_enable(fd_ImpFeMain->MainFileMenu,
+						  MAIN_FILE_MENU_OPEN, TRUE);
+	ui_menu_enable(fd_ImpFeMain->MainFileMenu,
+						  MAIN_FILE_MENU_NEW, TRUE);
+	ui_menu_enable(fd_ImpFeMain->MainFileMenu,
+						  MAIN_FILE_MENU_SAVE, FALSE);
+	ui_menu_enable(fd_ImpFeMain->MainFileMenu,
+						  MAIN_FILE_MENU_CLOSE, FALSE);
 	/* Server menu options */
-	fl_set_menu_item_mode(fd_ImpFeMain->MainServerMenu,
-						  MAIN_SERVER_MENU_OPEN, FL_PUP_GREY);
-	fl_set_menu_item_mode(fd_ImpFeMain->MainServerMenu,
-						  MAIN_SERVER_MENU_CLOSE, FL_PUP_GREY);
+	ui_menu_enable(fd_ImpFeMain->MainServerMenu,
+						  MAIN_SERVER_MENU_OPEN, FALSE);
+	ui_menu_enable(fd_ImpFeMain->MainServerMenu,
+						  MAIN_SERVER_MENU_CLOSE, FALSE);
 	/* View menu options */
-	fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-						  MAIN_VIEW_MENU_MAP, FL_PUP_GREY);
-	fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-						  MAIN_VIEW_MENU_PLANET, FL_PUP_GREY);
-	fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-						  MAIN_VIEW_MENU_SHIP, FL_PUP_GREY);
-	fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-						  MAIN_VIEW_MENU_SCRIPTS, FL_PUP_GREY);
-	fl_set_menu_item_mode(fd_ImpFeMain->MainViewMenu,
-						  MAIN_VIEW_MENU_CMDS, FL_PUP_GREY);
+	ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+						  MAIN_VIEW_MENU_MAP, FALSE);
+	ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+						  MAIN_VIEW_MENU_PLANET, FALSE);
+	ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+						  MAIN_VIEW_MENU_SHIP, FALSE);
+	ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+						  MAIN_VIEW_MENU_SCRIPTS, FALSE);
+	ui_menu_enable(fd_ImpFeMain->MainViewMenu,
+						  MAIN_VIEW_MENU_CMDS, FALSE);
 	/* Config menu */
-	fl_set_menu_item_mode(fd_ImpFeMain->MainConfigMenu,
-						  MAIN_CONFIG_MENU_HOST, FL_PUP_GREY);
-	fl_set_menu_item_mode(fd_ImpFeMain->MainConfigMenu,
-						  MAIN_CONFIG_MENU_SETTINGS, FL_PUP_GREY);
-	if (fl_form_is_visible(fd_MapForm->MapForm))
+	ui_menu_enable(fd_ImpFeMain->MainConfigMenu,
+						  MAIN_CONFIG_MENU_HOST, FALSE);
+	ui_menu_enable(fd_ImpFeMain->MainConfigMenu,
+						  MAIN_CONFIG_MENU_SETTINGS, FALSE);
+	if (ui_window_visible(fd_MapForm->MapForm))
 	{
-		fl_hide_form(fd_MapForm->MapForm);
+		ui_window_hide(fd_MapForm->MapForm);
 	}
 }
 

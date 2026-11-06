@@ -56,12 +56,10 @@ static char rcsid[] = "$Id: main.c,v 1.3 2000/05/24 21:51:39 marisa Exp $";
 
 #define BUILDING_MAIN
 #include "config.h"
-#include "forms.h"
 #include "ImpFeGui.h"
 #include "gui.h"
 #include "impfe.h"
 #include "smimplogo.xpm"
-#include "smimplogo.xbm"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -76,7 +74,7 @@ static char rcsid[] = "$Id: main.c,v 1.3 2000/05/24 21:51:39 marisa Exp $";
  */
 void fe_puts(const char *mesg)
 {
-	fl_addto_browser_chars(fd_ImpFeMain->MainBrowser, mesg);
+	ui_browser_append(fd_ImpFeMain->MainBrowser, mesg);
 }
 
 /*
@@ -85,103 +83,63 @@ void fe_puts(const char *mesg)
 void initImpFeMain_menu(FD_ImpFeMain *MainForm)
 {
     /* File Menu */
-    fl_set_menu(MainForm->MainFileMenu, MAIN_FILE_MENU);
-    fl_set_menu_item_mode(MainForm->MainFileMenu, MAIN_FILE_MENU_CLOSE,
-						  FL_PUP_GREY);
-    fl_set_menu_item_mode(MainForm->MainFileMenu, MAIN_FILE_MENU_SAVE,
-						  FL_PUP_GREY);
+    ui_menu_enable(MainForm->MainFileMenu, MAIN_FILE_MENU_CLOSE, FALSE);
+    ui_menu_enable(MainForm->MainFileMenu, MAIN_FILE_MENU_SAVE, FALSE);
 
     /* Server Menu */
-    fl_set_menu(MainForm->MainServerMenu, MAIN_SERVER_MENU);
-    fl_set_menu_item_mode(MainForm->MainServerMenu, MAIN_SERVER_MENU_OPEN,
-						  FL_PUP_GREY);
-    fl_set_menu_item_mode(MainForm->MainServerMenu, MAIN_SERVER_MENU_CLOSE,
-						  FL_PUP_GREY);
+    ui_menu_enable(MainForm->MainServerMenu, MAIN_SERVER_MENU_OPEN, FALSE);
+    ui_menu_enable(MainForm->MainServerMenu, MAIN_SERVER_MENU_CLOSE, FALSE);
 
     /* View Menu */
-    fl_set_menu(MainForm->MainViewMenu, MAIN_VIEW_MENU);
-    fl_set_menu_item_mode(MainForm->MainViewMenu, MAIN_VIEW_MENU_MAP,
-						  FL_PUP_GREY);
-    fl_set_menu_item_mode(MainForm->MainViewMenu, MAIN_VIEW_MENU_PLANET,
-						  FL_PUP_GREY);
-    fl_set_menu_item_mode(MainForm->MainViewMenu, MAIN_VIEW_MENU_SHIP,
-						  FL_PUP_GREY);
-    fl_set_menu_item_mode(MainForm->MainViewMenu, MAIN_VIEW_MENU_SCRIPTS,
-						  FL_PUP_GREY);
-    fl_set_menu_item_mode(MainForm->MainViewMenu, MAIN_VIEW_MENU_CMDS,
-						  FL_PUP_GREY);
+    ui_menu_enable(MainForm->MainViewMenu, MAIN_VIEW_MENU_MAP, FALSE);
+    ui_menu_enable(MainForm->MainViewMenu, MAIN_VIEW_MENU_PLANET, FALSE);
+    ui_menu_enable(MainForm->MainViewMenu, MAIN_VIEW_MENU_SHIP, FALSE);
+    ui_menu_enable(MainForm->MainViewMenu, MAIN_VIEW_MENU_SCRIPTS, FALSE);
+    ui_menu_enable(MainForm->MainViewMenu, MAIN_VIEW_MENU_CMDS, FALSE);
 
     /* Configure Menu */
-    fl_set_menu(MainForm->MainConfigMenu, MAIN_CONFIG_MENU);
-    fl_set_menu_item_mode(MainForm->MainConfigMenu, MAIN_CONFIG_MENU_HOST,
-						  FL_PUP_GREY);
-    fl_set_menu_item_mode(MainForm->MainConfigMenu, MAIN_CONFIG_MENU_SETTINGS,
-						  FL_PUP_GREY);
-
-    /* Help Menu */
-    fl_set_menu(MainForm->MainHelpMenu, MAIN_HELP_MENU);
-
-    /* Set up the input boxes */
-    fl_set_input_return(MainForm->MainInputBox, FL_RETURN_END);
-    fl_set_input_hscrollbar(MainForm->MainInputBox, FL_OFF);
-    fl_set_input_vscrollbar(MainForm->MainInputBox, FL_OFF);
-    fl_set_input_maxchars(MainForm->MainInputBox, 257);
-    fl_set_input_maxchars(fd_CommandForm->CmdsCmd, 256);
-
-    /* Set up the browsers */
-    /* Main browser */
-    fl_set_browser_fontsize(fd_ImpFeMain->MainBrowser, FL_NORMAL_FONT);
-    fl_set_browser_fontstyle(fd_ImpFeMain->MainBrowser, FL_FIXED_STYLE);
-    /* Help browser */
-    fl_set_browser_fontsize(fd_HelpForm->Help_Browser, FL_NORMAL_FONT);
-    /* Ship census browser */
-    fl_set_browser_fontsize(fd_ShipCensusForm->ShBrowse, FL_NORMAL_FONT);
-    fl_set_browser_fontstyle(fd_ShipCensusForm->ShBrowse, FL_FIXED_STYLE);
-    /* Ship detail browser */
-    fl_set_browser_fontsize(fd_ShipDetailForm->ShDetItem, FL_NORMAL_FONT);
-    fl_set_browser_fontstyle(fd_ShipDetailForm->ShDetItem, FL_FIXED_STYLE);
-    /* Planet census browser */
-    fl_set_browser_fontsize(fd_PlanetCensusForm->PlBrowse, FL_NORMAL_FONT);
-    fl_set_browser_fontstyle(fd_PlanetCensusForm->PlBrowse, FL_FIXED_STYLE);
-    /* Planet detail browser */
-    fl_set_browser_fontsize(fd_PlanetDetailForm->PlDetItem, FL_NORMAL_FONT);
-    fl_set_browser_fontstyle(fd_PlanetDetailForm->PlDetItem, FL_FIXED_STYLE);
-    fl_set_browser_fontsize(fd_PlanetDetailForm->PlProdBrowse, FL_NORMAL_FONT);
-    fl_set_browser_fontstyle(fd_PlanetDetailForm->PlProdBrowse, FL_FIXED_STYLE);
-    /* Commands browser */
-    fl_set_browser_fontsize(fd_CommandForm->CmdsBrowser, FL_NORMAL_FONT);
-    fl_set_browser_fontstyle(fd_CommandForm->CmdsBrowser, FL_FIXED_STYLE);
+    ui_menu_enable(MainForm->MainConfigMenu, MAIN_CONFIG_MENU_HOST, FALSE);
+    ui_menu_enable(MainForm->MainConfigMenu, MAIN_CONFIG_MENU_SETTINGS, FALSE);
 
     /* Choice lists */
-    fl_addto_choice(fd_CommandForm->CmdsPriorBtn, "LOW");
-    fl_addto_choice(fd_CommandForm->CmdsPriorBtn, "MEDIUM");
-    fl_addto_choice(fd_CommandForm->CmdsPriorBtn, "HIGH");
-    fl_addto_choice(fd_CommandForm->CmdsPriorBtn, "IMMED");
-    fl_set_choice(fd_CommandForm->CmdsPriorBtn, 4);
+    ui_choice_add(fd_CommandForm->CmdsPriorBtn, "LOW");
+    ui_choice_add(fd_CommandForm->CmdsPriorBtn, "MEDIUM");
+    ui_choice_add(fd_CommandForm->CmdsPriorBtn, "HIGH");
+    ui_choice_add(fd_CommandForm->CmdsPriorBtn, "IMMED");
+    ui_choice_set(fd_CommandForm->CmdsPriorBtn, 4);
 }
 
 void initImpFeServCfg(void)
 {
 	/* Set the field maximums */
-	fl_set_input_maxchars(fd_ServCfgForm->ServName, MAX_HOST_LEN -1);
-	fl_set_input_maxchars(fd_ServCfgForm->ServPort, 6);
-	fl_set_input_maxchars(fd_ServCfgForm->PlayerName, MAX_PLAYER_LEN -1);
-	fl_set_input_maxchars(fd_ServCfgForm->PlayerPswd, MAX_PLAYER_LEN -1);
-	fl_set_input_maxchars(fd_ServCfgForm->GameDesc, 80);
+	gtk_entry_set_max_length(GTK_ENTRY(fd_ServCfgForm->ServName), MAX_HOST_LEN -1);
+	gtk_entry_set_max_length(GTK_ENTRY(fd_ServCfgForm->ServPort), 6);
+	gtk_entry_set_max_length(GTK_ENTRY(fd_ServCfgForm->PlayerName), MAX_PLAYER_LEN -1);
+	gtk_entry_set_max_length(GTK_ENTRY(fd_ServCfgForm->PlayerPswd), MAX_PLAYER_LEN -1);
+	gtk_entry_set_max_length(GTK_ENTRY(fd_ServCfgForm->GameDesc), 80);
 }
 
 /*
- * close_main_form - generic call-back for closing a form
+ * impfeQuit - shuts down the connection, saves everything and leaves
+ *             the main loop
  */
-int close_main_form(FL_FORM *form, void *unused)
+void impfeQuit(void)
 {
 	(void) cmd_connect(TRUE);
 	handleSaveCfg();
 	handleCloseCfg();
 	freeCmdQueues();
 	impfeCleanup();
-	fl_finish();
-	exit(0);
+	gtk_main_quit();
+}
+
+/*
+ * close_main_form - called when the main window is closed
+ */
+gboolean close_main_form(GtkWidget *w, GdkEvent *ev, gpointer data)
+{
+	impfeQuit();
+	return(TRUE);
 }
 
 void setDefaults(void)
@@ -215,11 +173,6 @@ int file_exists(const char * filename)
         return(1);
     }
     return(0);
-}
-
-int fe_idle_callback(XEvent *xev, void *user_data)
-{
-	return 0;
 }
 
 /*
@@ -283,8 +236,8 @@ void playMusic()
 
 int main(int argc, char *argv[])
 {
-	int item;
-	Pixmap icon_pixmap; /* Icon for closed windows */
+	GdkPixbuf *icon;
+
 	pid = fork();
 	if (pid == 0)
 	{
@@ -302,105 +255,62 @@ int main(int argc, char *argv[])
 		printf("Music fork failed\n");
 	}
 
-	/* Set fonts to 75dpi */
-	fl_set_font_name(FL_NORMAL_STYLE,            "-*-helvetica-medium-r-*-*-*-?-*-75-*-*-*-*");
-	fl_set_font_name(FL_BOLD_STYLE,            "-*-helvetica-bold-r-*-*-*-?-*-75-p-*-*-*");
-	fl_set_font_name(FL_ITALIC_STYLE,            "-*-helvetica-medium-o-*-*-*-?-*-75-p-*-*-*");
-	fl_set_font_name(FL_BOLDITALIC_STYLE,        "-*-helvetica-bold-o-no*-*-*-?-*-75-p-*-*-*");
-	fl_set_font_name(FL_FIXED_STYLE,            "-adobe-courier-medium-r-*-*-*-?-*-75-m-*-*-*");
-	fl_set_font_name(FL_FIXEDBOLD_STYLE,        "-adobe-courier-bold-r-*-*-*-?-*-75-m-*-*-*");
-	fl_set_font_name(FL_FIXEDITALIC_STYLE,        "-adobe-courier-medium-o-*-*-*-?-*-75-m-*-*-*");
-	fl_set_font_name(FL_FIXEDBOLDITALIC_STYLE,    "-adobe-courier-bold-o-*-*-*-?-*-75-m-*-*-*");
-	fl_set_font_name(FL_TIMES_STYLE,            "-*-times-medium-r-*-*-*-?-*-75-p-*-*-*");
-	fl_set_font_name(FL_TIMESBOLD_STYLE,        "-*-times-bold-r-*-*-*-?-*-75-p-*-*-*");
-	fl_set_font_name(FL_TIMESITALIC_STYLE,        "-*-times-medium-i-*-*-*-?-*-75-p-*-*-*");
-	fl_set_font_name(FL_TIMESBOLDITALIC_STYLE,    "-*-times-bold-i-*-*-*-?-*-75-p-*-*-*");
-	fl_set_font_name(FL_MISC_STYLE,            "-*-charter-medium-r-*-*-*-?-*-75-*-*-*-*");
-	fl_set_font_name(FL_MISCBOLD_STYLE,        "-*-charter-bold-r-*-*-*-?-*-75-*-*-*-*");
-	fl_set_font_name(FL_MISCITALIC_STYLE,        "-*-charter-medium-i-*-*-*-?-*-75-*-*-*-*");
-	fl_set_font_name(FL_SYMBOL_STYLE,            "-*-symbol-medium-r-*-*-*-?-*-75-*-*-*-*");
-
 	/*
-	 * Set up the Xforms interface
+	 * Set up GTK
 	 */
-	fl_initialize(&argc, argv, 0, 0, 0);
+	ui_init(&argc, &argv);
+	g_set_application_name("ImpFE");
 
-    /* Attatch icon */
-    icon_pixmap = fl_create_from_bitmapdata(fl_default_win(),
-	smimplogo_bits, smimplogo_width, smimplogo_height);
+	/* Use the Imperium logo as the icon for all our windows */
+	icon = ui_xpm_pixbuf((const char **) smimplogo);
+	if (icon != NULL)
+	{
+		gtk_window_set_default_icon(icon);
+	}
 
 	/*
-	 * Now create the various object instances
+	 * Now create the various windows
 	 */
 	fd_ImpFeMain = create_form_ImpFeMain();
-	fl_set_form_icon(fd_ImpFeMain->ImpFeMain, icon_pixmap, 0);
 	fd_ImpFeAbout = create_form_ImpFeAbout();
-	fl_set_form_icon(fd_ImpFeAbout->ImpFeAbout, icon_pixmap, 0);
 	fd_MapForm = create_form_MapForm();
-	fl_set_form_icon(fd_MapForm->MapForm, icon_pixmap, 0);
 	fd_TasksForm = create_form_TasksForm();
-	fl_set_form_icon(fd_TasksForm->TasksForm, icon_pixmap, 0);
 	fd_ServCfgForm = create_form_ServCfgForm();
-	fl_set_form_icon(fd_ServCfgForm->ServCfgForm, icon_pixmap, 0);
 	fd_ShipCensusForm = create_form_ShipCensusForm();
-	fl_set_form_icon(fd_ShipCensusForm->ShipCensusForm, icon_pixmap, 0);
 	fd_PlanetCensusForm = create_form_PlanetCensusForm();
-	fl_set_form_icon(fd_PlanetCensusForm->PlanetCensusForm, icon_pixmap, 0);
 	fd_ShipDetailForm = create_form_ShipDetailForm();
-	fl_set_form_icon(fd_ShipDetailForm->ShipDetailForm, icon_pixmap, 0);
 	fd_PlanetDetailForm = create_form_PlanetDetailForm();
-	fl_set_form_icon(fd_PlanetDetailForm->PlanetDetailForm, icon_pixmap, 0);
-	fd_PowerRptForm = create_form_PowerRptForm();
-	fd_MinerCensusForm = create_form_MinerCensusForm();
-	fd_DebugOutputForm = create_form_DebugOutputForm();
-	fd_LocalEditorForm = create_form_LocalEditorForm();
 	fd_HelpForm = create_form_HelpForm();
-	fl_set_form_icon(fd_HelpForm->HelpForm, icon_pixmap, 0);
 	fd_CommandForm = create_form_CommandForm();
-	fl_set_form_icon(fd_CommandForm->CommandForm, icon_pixmap, 0);
-	fd_Dummy3Form = create_form_Dummy3Form();
-	fd_Dummy4Form = create_form_Dummy4Form();
-	fd_Dummy5Form = create_form_Dummy5Form();
+
+	/* Dialogs belong to the main window */
+	gtk_window_set_transient_for(GTK_WINDOW(fd_ServCfgForm->ServCfgForm),
+		GTK_WINDOW(fd_ImpFeMain->ImpFeMain));
+	gtk_window_set_transient_for(GTK_WINDOW(fd_ImpFeAbout->ImpFeAbout),
+		GTK_WINDOW(fd_ImpFeMain->ImpFeMain));
 
     /* Set defaults */
     setDefaults();
     initCmdQueues();
     DirtyData = FALSE;
-    /* Attatch icon */
-    icon_pixmap = fl_create_from_bitmapdata(fl_default_win(),
-	smimplogo_bits, smimplogo_width, smimplogo_height);
 
 	/* fill-in form initialization code */
-	fl_set_form_atclose(fd_ImpFeMain->ImpFeMain, close_main_form,
-						&item);
 	initImpFeMain_menu(fd_ImpFeMain);
 	initImpFeServCfg();
 
-	/* Set the pixmaps */
-	fl_free_pixmap_pixmap(fd_ImpFeAbout->ImpLogo);
-	fl_set_pixmap_data(fd_ImpFeAbout->ImpLogo, smimplogo);
-
-	/* show the first form */
-	fl_set_form_title(fd_ImpFeMain->ImpFeMain, "ImpFE");
-	fl_show_form(fd_ImpFeMain->ImpFeMain,FL_PLACE_CENTER,FL_FULLBORDER,
-				 "ImpFeMain");
-	fl_set_form_title(fd_ImpFeMain->ImpFeMain, "ImpFE");
-
-	(void) fl_set_idle_callback(fe_idle_callback, NULL);
+	/* show the first window */
+	ui_window_show(fd_ImpFeMain->ImpFeMain);
 
 	/*
-	 * Start the main processing loop - this never returns!
+	 * Start the main processing loop - returns when we quit
 	 */
-	fl_do_forms();
-	/*
-	 * Never really get here
-	 */
+	gtk_main();
 	return 0;
 }
 
 /*
  * impfeCleanup - this does whatever housecleaning is required before
- * exiting. Can use Xforms calls
+ * exiting. Can still use GTK calls
  */
 void impfeCleanup(void)
 {

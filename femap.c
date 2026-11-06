@@ -33,7 +33,6 @@ static char rcsid[]="$Id: femap.c,v 1.1.1.1 2000/05/17 19:22:13 marisa Exp $";
 #else
 #include <strings.h>
 #endif
-#include "forms.h"
 #include "impfe.h"
 #include "ImpFeGui.h"
 #include "ImpFeMess.h"
@@ -57,12 +56,54 @@ static char rcsid[]="$Id: femap.c,v 1.1.1.1 2000/05/17 19:22:13 marisa Exp $";
 #include "planq.xpm"
 
 /*
- * setPm - sets the Pixmap for a given object
+ * setPm - sets the image shown in a map cell
  */
-void setPm(FL_OBJECT *ob, const char **bits)
+static void setPm(GtkWidget *cell, const char **bits)
 {
-	fl_free_pixmapbutton_pixmap(ob);
-	fl_set_pixmapbutton_data(ob, (unsigned char **)bits);
+	gtk_image_set_from_pixbuf(GTK_IMAGE(cell), ui_xpm_pixbuf(bits));
+}
+
+/*
+ * sectPixmap - returns the image to show for a given sector type
+ */
+static const char **sectPixmap(int type)
+{
+	switch (type)
+	{
+		case BM_UNKNOWN:
+			return((const char **) unknown_xpm);
+		case BM_PLAN:
+			return((const char **) genplan_xpm);
+		case BM_STAR:
+			return((const char **) star_xpm);
+		case BM_BH:
+			return((const char **) bhole_xpm);
+		case BM_SN:
+			return((const char **) snova_xpm);
+		case BM_PC_A:
+			return((const char **) plana_xpm);
+		case BM_PC_B:
+			return((const char **) planb_xpm);
+		case BM_PC_C:
+			return((const char **) planc_xpm);
+		case BM_PC_D:
+			return((const char **) pland_xpm);
+		case BM_PC_M:
+			return((const char **) planm_xpm);
+		case BM_PC_N:
+			return((const char **) plann_xpm);
+		case BM_PC_O:
+			return((const char **) plano_xpm);
+		case BM_PC_Q:
+			return((const char **) planq_xpm);
+		case BM_PC_H:
+			return((const char **) planh_xpm);
+		case BM_EMPTY:
+			return((const char **) btile_xpm);
+		default:
+			fprintf(stderr, "*** Unknown sector type\n");
+			return((const char **) unknown_xpm);
+	}
 }
 
 /*
@@ -74,408 +115,37 @@ void setPm(FL_OBJECT *ob, const char **bits)
  */
 void buildMapDisp(void)
 {
-    int row, col, tmp;
-    const char **PixMap;
+	int row, col;
 	char posit[25];
 
+	if (BitMap == NULL)
+	{
+		return;
+	}
+	/* Set the column coord fields */
+	for (col=0; col < MAP_COLS; col++)
+	{
+		sprintf(posit, "%04u", col + LastX);
+		ui_set_text(fd_MapForm->ColLbl[col], posit);
+	}
 	/* Loop for each row */
-    for (row=0; row<7; row++)
-    {
+	for (row=0; row < MAP_ROWS; row++)
+	{
 		/* Set the row coord field */
-		switch (row)
-		{
-			case 0:
-				sprintf(posit, "%04u", row + LastY);
-				fl_set_object_label(fd_MapForm->Row1, posit);
-				break;
-			case 1:
-				sprintf(posit, "%04u", row + LastY);
-				fl_set_object_label(fd_MapForm->Row2, posit);
-				break;
-			case 2:
-				sprintf(posit, "%04u", row + LastY);
-				fl_set_object_label(fd_MapForm->Row3, posit);
-				break;
-			case 3:
-				sprintf(posit, "%04u", row + LastY);
-				fl_set_object_label(fd_MapForm->Row4, posit);
-				break;
-			case 4:
-				sprintf(posit, "%04u", row + LastY);
-				fl_set_object_label(fd_MapForm->Row5, posit);
-				break;
-			case 5:
-				sprintf(posit, "%04u", row + LastY);
-				fl_set_object_label(fd_MapForm->Row6, posit);
-				break;
-			case 6:
-				sprintf(posit, "%04u", row + LastY);
-				fl_set_object_label(fd_MapForm->Row7, posit);
-				break;
-		}
+		sprintf(posit, "%04u", row + LastY);
+		ui_set_text(fd_MapForm->RowLbl[row], posit);
 
-		/* Loop for each column */
-		for (col=0; col<10; col++)
+		/* Loop for each column, showing the sector type */
+		for (col=0; col < MAP_COLS; col++)
 		{
-			/* If doing the first row, also set the column label */
-			if (row == 0)
-			{
-				/* Set the row coord field */
-				switch (col)
-				{
-					case 0:
-						sprintf(posit, "%04u", col + LastX);
-						fl_set_object_label(fd_MapForm->Col1, posit);
-						break;
-					case 1:
-						sprintf(posit, "%04u", col + LastX);
-						fl_set_object_label(fd_MapForm->Col2, posit);
-						break;
-					case 2:
-						sprintf(posit, "%04u", col + LastX);
-						fl_set_object_label(fd_MapForm->Col3, posit);
-						break;
-					case 3:
-						sprintf(posit, "%04u", col + LastX);
-						fl_set_object_label(fd_MapForm->Col4, posit);
-						break;
-					case 4:
-						sprintf(posit, "%04u", col + LastX);
-						fl_set_object_label(fd_MapForm->Col5, posit);
-						break;
-					case 5:
-						sprintf(posit, "%04u", col + LastX);
-						fl_set_object_label(fd_MapForm->Col6, posit);
-						break;
-					case 6:
-						sprintf(posit, "%04u", col + LastX);
-						fl_set_object_label(fd_MapForm->Col7, posit);
-						break;
-					case 7:
-						sprintf(posit, "%04u", col + LastX);
-						fl_set_object_label(fd_MapForm->Col8, posit);
-						break;
-					case 8:
-						sprintf(posit, "%04u", col + LastX);
-						fl_set_object_label(fd_MapForm->Col9, posit);
-						break;
-					case 9:
-						sprintf(posit, "%04u", col + LastX);
-						fl_set_object_label(fd_MapForm->ColA, posit);
-						break;
-				}
-			}
-			/* Get the sector type */
-			tmp = (int) BitMap->coord[row + LastY][col + LastX].type;
-			/* Set the pointer based on the sector type */
-			switch (tmp)
-			{
-				case BM_UNKNOWN:
-					PixMap=unknown_xpm;
-					break;
-				case BM_PLAN:
-					PixMap=genplan_xpm;
-					break;
-				case BM_STAR:
-					PixMap=star_xpm;
-					break;
-				case BM_BH:
-					PixMap=bhole_xpm;
-					break;
-				case BM_SN:
-					PixMap=snova_xpm;
-					break;
-				case BM_PC_A:
-					PixMap=plana_xpm;
-					break;
-				case BM_PC_B:
-					PixMap=planb_xpm;
-					break;
-				case BM_PC_C:
-					PixMap=planc_xpm;
-					break;
-				case BM_PC_D:
-					PixMap=pland_xpm;
-					break;
-				case BM_PC_M:
-					PixMap=planm_xpm;
-					break;
-				case BM_PC_N:
-					PixMap=plann_xpm;
-					break;
-				case BM_PC_O:
-					PixMap=plano_xpm;
-					break;
-				case BM_PC_Q:
-					PixMap=planq_xpm;
-					break;
-				case BM_PC_H:
-					PixMap=planh_xpm;
-					break;
-				case BM_EMPTY:
-					PixMap=btile_xpm;
-					break;
-				default:
-					fprintf(stderr, "*** Unknown sector type\n");
-					PixMap=unknown_xpm;
-					break;
-			}
-			/* God this is messy */
-			/* Now update the pixmap reference */
-			switch (row)
-			{
-				case 0: /* Row "A" */
-					switch(col)
-					{
-						case 0:
-							setPm(fd_MapForm->A1, PixMap);
-							break;
-						case 1:
-							setPm(fd_MapForm->A2, PixMap);
-							break;
-						case 2:
-							setPm(fd_MapForm->A3, PixMap);
-							break;
-						case 3:
-							setPm(fd_MapForm->A4, PixMap);
-							break;
-						case 4:
-							setPm(fd_MapForm->A5, PixMap);
-							break;
-						case 5:
-							setPm(fd_MapForm->A6, PixMap);
-							break;
-						case 6:
-							setPm(fd_MapForm->A7, PixMap);
-							break;
-						case 7:
-							setPm(fd_MapForm->A8, PixMap);
-							break;
-						case 8:
-							setPm(fd_MapForm->A9, PixMap);
-							break;
-						case 9:
-							setPm(fd_MapForm->AA, PixMap);
-							break;
-					}
-					break;
-				case 1: /* Row "B" */
-					switch(col)
-					{
-						case 0:
-							setPm(fd_MapForm->B1, PixMap);
-							break;
-						case 1:
-							setPm(fd_MapForm->B2, PixMap);
-							break;
-						case 2:
-							setPm(fd_MapForm->B3, PixMap);
-							break;
-						case 3:
-							setPm(fd_MapForm->B4, PixMap);
-							break;
-						case 4:
-							setPm(fd_MapForm->B5, PixMap);
-							break;
-						case 5:
-							setPm(fd_MapForm->B6, PixMap);
-							break;
-						case 6:
-							setPm(fd_MapForm->B7, PixMap);
-							break;
-						case 7:
-							setPm(fd_MapForm->B8, PixMap);
-							break;
-						case 8:
-							setPm(fd_MapForm->B9, PixMap);
-							break;
-						case 9:
-							setPm(fd_MapForm->BA, PixMap);
-							break;
-					}
-					break;
-				case 2: /* Row "C" */
-					switch(col)
-					{
-						case 0:
-							setPm(fd_MapForm->C1, PixMap);
-							break;
-						case 1:
-							setPm(fd_MapForm->C2, PixMap);
-							break;
-						case 2:
-							setPm(fd_MapForm->C3, PixMap);
-							break;
-						case 3:
-							setPm(fd_MapForm->C4, PixMap);
-							break;
-						case 4:
-							setPm(fd_MapForm->C5, PixMap);
-							break;
-						case 5:
-							setPm(fd_MapForm->C6, PixMap);
-							break;
-						case 6:
-							setPm(fd_MapForm->C7, PixMap);
-							break;
-						case 7:
-							setPm(fd_MapForm->C8, PixMap);
-							break;
-						case 8:
-							setPm(fd_MapForm->C9, PixMap);
-							break;
-						case 9:
-							setPm(fd_MapForm->CA, PixMap);
-							break;
-					}
-					break;
-				case 3: /* Row "D" */
-					switch(col)
-					{
-						case 0:
-							setPm(fd_MapForm->D1, PixMap);
-							break;
-						case 1:
-							setPm(fd_MapForm->D2, PixMap);
-							break;
-						case 2:
-							setPm(fd_MapForm->D3, PixMap);
-							break;
-						case 3:
-							setPm(fd_MapForm->D4, PixMap);
-							break;
-						case 4:
-							setPm(fd_MapForm->D5, PixMap);
-							break;
-						case 5:
-							setPm(fd_MapForm->D6, PixMap);
-							break;
-						case 6:
-							setPm(fd_MapForm->D7, PixMap);
-							break;
-						case 7:
-							setPm(fd_MapForm->D8, PixMap);
-							break;
-						case 8:
-							setPm(fd_MapForm->D9, PixMap);
-							break;
-						case 9:
-							setPm(fd_MapForm->DA, PixMap);
-							break;
-					}
-					break;
-				case 4: /* Row "E" */
-					switch(col)
-					{
-						case 0:
-							setPm(fd_MapForm->E1, PixMap);
-							break;
-						case 1:
-							setPm(fd_MapForm->E2, PixMap);
-							break;
-						case 2:
-							setPm(fd_MapForm->E3, PixMap);
-							break;
-						case 3:
-							setPm(fd_MapForm->E4, PixMap);
-							break;
-						case 4:
-							setPm(fd_MapForm->E5, PixMap);
-							break;
-						case 5:
-							setPm(fd_MapForm->E6, PixMap);
-							break;
-						case 6:
-							setPm(fd_MapForm->E7, PixMap);
-							break;
-						case 7:
-							setPm(fd_MapForm->E8, PixMap);
-							break;
-						case 8:
-							setPm(fd_MapForm->E9, PixMap);
-							break;
-						case 9:
-							setPm(fd_MapForm->EA, PixMap);
-							break;
-					}
-					break;
-				case 5: /* Row "F" */
-					switch(col)
-					{
-						case 0:
-							setPm(fd_MapForm->F1, PixMap);
-							break;
-						case 1:
-							setPm(fd_MapForm->F2, PixMap);
-							break;
-						case 2:
-							setPm(fd_MapForm->F3, PixMap);
-							break;
-						case 3:
-							setPm(fd_MapForm->F4, PixMap);
-							break;
-						case 4:
-							setPm(fd_MapForm->F5, PixMap);
-							break;
-						case 5:
-							setPm(fd_MapForm->F6, PixMap);
-							break;
-						case 6:
-							setPm(fd_MapForm->F7, PixMap);
-							break;
-						case 7:
-							setPm(fd_MapForm->F8, PixMap);
-							break;
-						case 8:
-							setPm(fd_MapForm->F9, PixMap);
-							break;
-						case 9:
-							setPm(fd_MapForm->FA, PixMap);
-							break;
-					}
-					break;
-				case 6: /* Row "G" */
-					switch(col)
-					{
-						case 0:
-							setPm(fd_MapForm->G1, PixMap);
-							break;
-						case 1:
-							setPm(fd_MapForm->G2, PixMap);
-							break;
-						case 2:
-							setPm(fd_MapForm->G3, PixMap);
-							break;
-						case 3:
-							setPm(fd_MapForm->G4, PixMap);
-							break;
-						case 4:
-							setPm(fd_MapForm->G5, PixMap);
-							break;
-						case 5:
-							setPm(fd_MapForm->G6, PixMap);
-							break;
-						case 6:
-							setPm(fd_MapForm->G7, PixMap);
-							break;
-						case 7:
-							setPm(fd_MapForm->G8, PixMap);
-							break;
-						case 8:
-							setPm(fd_MapForm->G9, PixMap);
-							break;
-						case 9:
-							setPm(fd_MapForm->GA, PixMap);
-							break;
-					}
-					break;
-			}
+			setPm(fd_MapForm->Cell[row][col], sectPixmap(
+				(int) BitMap->coord[row + LastY][col + LastX].type));
 		}
-    }
-	sprintf(posit, "%4u", LastY);
-	fl_set_input(fd_MapForm->JmRow, posit);
-	sprintf(posit, "%4u", LastX);
-	fl_set_input(fd_MapForm->JmCol, posit);
+	}
+	sprintf(posit, "%u", LastY);
+	ui_entry_set(fd_MapForm->JmRow, posit);
+	sprintf(posit, "%u", LastX);
+	ui_entry_set(fd_MapForm->JmCol, posit);
 }
 
 /*
@@ -620,7 +290,7 @@ void scrollFeMap(int stepX, int stepY)
  */
 void updateMaps(void)
 {
-	if (fl_form_is_visible(fd_MapForm->MapForm))
+	if (ui_window_visible(fd_MapForm->MapForm))
 	{
 		buildMapDisp();
 	}

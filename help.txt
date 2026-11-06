@@ -12,9 +12,8 @@
 @C4@c@b@lOverview
 
 ImpFE is a graphical front-end for the multi-user science fiction strategy game Imperium. It is distributed under the
-GNU Public License, and should compile fine on most any modern Unix platform. It uses the XForms library toolkit by
-T.C. Zhao and Mark Overmars, so you will need a copy of that library and the Xpm Pixmap library to be able to compile
-it yourself.
+GNU Public License, and should compile fine on any modern Linux system. It uses the GTK 3 toolkit, so you will
+need the GTK 3 development files (libgtk-3-dev on Debian and Ubuntu) to be able to compile it yourself.
 
 %Main
 

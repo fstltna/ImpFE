@@ -34,7 +34,6 @@ static char rcsid[]="$Id: ship.c,v 1.1.1.1 2000/05/17 19:22:13 marisa Exp $";
 #else
 #include <strings.h>
 #endif
-#include "forms.h"
 #include "impfe.h"
 #include "ImpFeGui.h"
 #include "gui.h"
@@ -49,13 +48,11 @@ void buildShCensus(void)
 	ULONG shNum, crew;
 	USHORT eff;
 	FeShip_t tmpShip;
-	char workBuf[90], nameBuf[10], shType, location[15], crewBuf[5],
+	char workBuf[160], nameBuf[10], shType, location[15], crewBuf[5],
 		tBuff[28], shName[10];
 
-	/* Speed up output */
-	fl_freeze_form(fd_ShipCensusForm->ShipCensusForm);
 	/* Clear the existing contents, if any */
-	fl_clear_browser(fd_ShipCensusForm->ShBrowse);
+	ui_browser_clear(fd_ShipCensusForm->ShBrowse);
 	/* Loop for each known ship */
 fprintf(stderr, "*** start of loop\n");
 	for (shNum=0; shNum < next_ship; shNum++)
@@ -115,12 +112,11 @@ fprintf(stderr, "*** about to set ship location\n");
 						shName, nameBuf, shType, location, crewBuf, tmpShip.efficiency,
 						&tBuff[4]);
 fprintf(stderr, "*** about to add browser line\n");
-				fl_add_browser_line(fd_ShipCensusForm->ShBrowse, workBuf);
+				ui_browser_add_line(fd_ShipCensusForm->ShBrowse, workBuf);
 			}
 		}
 	}
 fprintf(stderr, "*** about to unfreeze form\n");
-	fl_unfreeze_form(fd_ShipCensusForm->ShipCensusForm);
 }
 
 /*
@@ -136,12 +132,10 @@ void buildShDetDisp(void)
 	FeItem_t tmpItem;
 	int compChar, engChar, lifeChar, photChar, blasChar, sensChar,
 		shldChar, telepChar, tractChar;
-	char workBuf[90], nameBuf[10], itType, location[15], tBuff[28], inst;
+	char workBuf[160], nameBuf[10], itType, location[15], tBuff[28], inst;
 
-	/* Speed up output */
-	fl_freeze_form(fd_ShipDetailForm->ShipDetailForm);
 	/* Clear the existing contents, if any */
-	fl_clear_browser(fd_ShipDetailForm->ShDetItem);
+	ui_browser_clear(fd_ShipDetailForm->ShDetItem);
 	compChar = (int) BIG_PART_CHAR[bp_computer];
 	engChar = (int) BIG_PART_CHAR[bp_engines];
 	lifeChar = (int) BIG_PART_CHAR[bp_lifeSupp];
@@ -215,7 +209,7 @@ void buildShDetDisp(void)
 			sprintf(workBuf, "%8u  %c  %3u  %3u  %5u %c", itNum,
 					itType, tmpItem.it_tf, tmpItem.efficiency,
 					tmpItem.weight, inst);
-			fl_add_browser_line(fd_ShipDetailForm->ShDetItem, workBuf);
+			ui_browser_add_line(fd_ShipDetailForm->ShDetItem, workBuf);
 		}
 	}
 	/* read the ship in */
@@ -229,62 +223,62 @@ void buildShDetDisp(void)
 	/* Write ship back */
 	(void) writeShip(&tmpShip, LastShip);
 	sprintf(workBuf, "%u", tmpShip.fuelLeft);
-	fl_set_object_label(fd_ShipDetailForm->Fuel, workBuf);
+	ui_set_text(fd_ShipDetailForm->Fuel, workBuf);
 	sprintf(workBuf, "%u", tmpShip.energy);
-	fl_set_object_label(fd_ShipDetailForm->Energy, workBuf);
+	ui_set_text(fd_ShipDetailForm->Energy, workBuf);
 	sprintf(workBuf, "%u", tmpShip.armourLeft);
-	fl_set_object_label(fd_ShipDetailForm->Armor, workBuf);
+	ui_set_text(fd_ShipDetailForm->Armor, workBuf);
 	sprintf(workBuf, "%u", tmpShip.shields);
-	fl_set_object_label(fd_ShipDetailForm->Shields, workBuf);
+	ui_set_text(fd_ShipDetailForm->Shields, workBuf);
 	sprintf(workBuf, "%u", tmpShip.shieldsKeep);
-	fl_set_object_label(fd_ShipDetailForm->ShKeep, workBuf);
+	ui_set_text(fd_ShipDetailForm->ShKeep, workBuf);
 	sprintf(workBuf, "%u", tmpShip.airLeft);
-	fl_set_object_label(fd_ShipDetailForm->Air, workBuf);
+	ui_set_text(fd_ShipDetailForm->Air, workBuf);
 	sprintf(workBuf, "%u", tmpShip.efficiency);
-	fl_set_object_label(fd_ShipDetailForm->Effic, workBuf);
+	ui_set_text(fd_ShipDetailForm->Effic, workBuf);
 	sprintf(workBuf, "%u", tmpShip.sh_tf);
-	fl_set_object_label(fd_ShipDetailForm->TF, workBuf);
+	ui_set_text(fd_ShipDetailForm->TF, workBuf);
 	sprintf(workBuf, "%u", tmpShip.hullTF);
-	fl_set_object_label(fd_ShipDetailForm->HullTF, workBuf);
+	ui_set_text(fd_ShipDetailForm->HullTF, workBuf);
 	sprintf(workBuf, "%u", tmpShip.engTF);
-	fl_set_object_label(fd_ShipDetailForm->EngTF, workBuf);
+	ui_set_text(fd_ShipDetailForm->EngTF, workBuf);
 	sprintf(workBuf, "%u", tmpShip.engEff);
-	fl_set_object_label(fd_ShipDetailForm->EngEff, workBuf);
+	ui_set_text(fd_ShipDetailForm->EngEff, workBuf);
 	if (tmpShip.plagueStage != 0)
 	{
-		fl_set_object_label(fd_ShipDetailForm->Plague, "YES");
+		ui_set_text(fd_ShipDetailForm->Plague, "YES");
 	}
 	else
 	{
-		fl_set_object_label(fd_ShipDetailForm->Plague, "NO");
+		ui_set_text(fd_ShipDetailForm->Plague, "NO");
 	}
 	sprintf(workBuf, "%u", tmpShip.num_civ);
-	fl_set_object_label(fd_ShipDetailForm->Civ, workBuf);
+	ui_set_text(fd_ShipDetailForm->Civ, workBuf);
 	sprintf(workBuf, "%u", tmpShip.num_sci);
-	fl_set_object_label(fd_ShipDetailForm->Sci, workBuf);
+	ui_set_text(fd_ShipDetailForm->Sci, workBuf);
 	sprintf(workBuf, "%u", tmpShip.num_mil);
-	fl_set_object_label(fd_ShipDetailForm->Mil, workBuf);
+	ui_set_text(fd_ShipDetailForm->Mil, workBuf);
 	sprintf(workBuf, "%u", tmpShip.num_ofc);
-	fl_set_object_label(fd_ShipDetailForm->Ofc, workBuf);
+	ui_set_text(fd_ShipDetailForm->Ofc, workBuf);
 	sprintf(workBuf, "%u", tmpShip.num_torp);
-	fl_set_object_label(fd_ShipDetailForm->Torp, workBuf);
+	ui_set_text(fd_ShipDetailForm->Torp, workBuf);
 	sprintf(workBuf, "%u", tmpShip.num_ore);
-	fl_set_object_label(fd_ShipDetailForm->Ore, workBuf);
+	ui_set_text(fd_ShipDetailForm->Ore, workBuf);
 	sprintf(workBuf, "%u", tmpShip.num_gold);
-	fl_set_object_label(fd_ShipDetailForm->Bars, workBuf);
+	ui_set_text(fd_ShipDetailForm->Bars, workBuf);
 	sprintf(workBuf, "%u", tmpShip.num_airt);
-	fl_set_object_label(fd_ShipDetailForm->AirTnk, workBuf);
+	ui_set_text(fd_ShipDetailForm->AirTnk, workBuf);
 	sprintf(workBuf, "%u", tmpShip.num_ftnk);
-	fl_set_object_label(fd_ShipDetailForm->FuelTnk, workBuf);
+	ui_set_text(fd_ShipDetailForm->FuelTnk, workBuf);
 	sprintf(workBuf, "%u", tmpShip.cargo);
-	fl_set_object_label(fd_ShipDetailForm->Cargo, workBuf);
+	ui_set_text(fd_ShipDetailForm->Cargo, workBuf);
 	strcpy(workBuf, ctime(&tmpShip.last_seen));
 	workBuf[24]='\0'; /* strip off NL */
-	fl_set_object_label(fd_ShipDetailForm->Seen, workBuf);
+	ui_set_text(fd_ShipDetailForm->Seen, workBuf);
 	sprintf(workBuf, "%u", LastShip);
-	fl_set_object_label(fd_ShipDetailForm->ShNum, workBuf);
+	ui_set_text(fd_ShipDetailForm->ShNum, workBuf);
 	sprintf(workBuf, "%u,%u", tmpShip.sh_row, tmpShip.sh_col);
-	fl_set_object_label(fd_ShipDetailForm->RowCol, workBuf);
+	ui_set_text(fd_ShipDetailForm->RowCol, workBuf);
 	if (tmpShip.owner != 0)
 	{
 		strcpy(workBuf, Player[tmpShip.owner].name);
@@ -293,17 +287,16 @@ void buildShDetDisp(void)
 	{
 		strcpy(workBuf, "???");
 	}
-	fl_set_object_label(fd_ShipDetailForm->Owner, workBuf);
+	ui_set_text(fd_ShipDetailForm->Owner, workBuf);
 	if (tmpShip.flags & BF_ONPLAN)
 	{
 		sprintf(workBuf, "Ship is on planet %u", tmpShip.planet);
-		fl_set_object_label(fd_ShipDetailForm->Where, workBuf);
+		ui_set_text(fd_ShipDetailForm->Where, workBuf);
 	}
 	else
 	{
-		fl_set_object_label(fd_ShipDetailForm->Where, "Ship is in space");
+		ui_set_text(fd_ShipDetailForm->Where, "Ship is in space");
 	}
 
-	fl_unfreeze_form(fd_ShipDetailForm->ShipDetailForm);
 }
 
