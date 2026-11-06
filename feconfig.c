@@ -63,11 +63,15 @@ static FILE *CfgHndl=NULL;
 static BOOL CfgParseErr=FALSE;
 
 /*
- * strdecode - Like strcpy(), except _ is converted to spaces
+ * strdecode - Like strlcpy(), except _ is converted to spaces
  */
-void strdecode(char *dest, char *src)
+void strdecode(char *dest, const char *src, size_t size)
 {
-	while (*src != '\0')
+	if (size == 0)
+	{
+		return;
+	}
+	while ((*src != '\0') && (size > 1))
 	{
 	    if (*src == '_')
 	    {
@@ -79,6 +83,7 @@ void strdecode(char *dest, char *src)
 	    }
 	    dest++;
 	    src++;
+	    size--;
 	}
 	dest[0]='\0'; /* Be safe */
 }
@@ -128,27 +133,37 @@ void handleLine(void)
 	}
 	if (strcmp(KeyWord, KEYWORD_GAME_HOST) == 0)
 	{
-	    strcpy(game_host, KeyValue);
+	    if (snprintf(game_host, sizeof(game_host), "%s", KeyValue) >=
+			(int) sizeof(game_host))
+	    {
+			fe_puts("Setting for " KEYWORD_GAME_HOST " in config file is too long\n");
+			CfgParseErr=TRUE;
+	    }
 	    return;
 	}
 	if (strcmp(KeyWord, KEYWORD_GAME_PORT) == 0)
 	{
-	    strcpy(game_port, KeyValue);
+	    if (snprintf(game_port, sizeof(game_port), "%s", KeyValue) >=
+			(int) sizeof(game_port))
+	    {
+			fe_puts("Setting for " KEYWORD_GAME_PORT " in config file is too long\n");
+			CfgParseErr=TRUE;
+	    }
 	    return;
 	}
 	if (strcmp(KeyWord, KEYWORD_GAME_PLAYER) == 0)
 	{
-	    strdecode(game_player, KeyValue);
+	    strdecode(game_player, KeyValue, sizeof(game_player));
 	    return;
 	}
 	if (strcmp(KeyWord, KEYWORD_GAME_PLAYER_PSWD) == 0)
 	{
-	    strdecode(game_player_pswd, KeyValue);
+	    strdecode(game_player_pswd, KeyValue, sizeof(game_player_pswd));
 	    return;
 	}
 	if (strcmp(KeyWord, KEYWORD_GAME_DESC) == 0)
 	{
-	    strdecode(game_desc, KeyValue);
+	    strdecode(game_desc, KeyValue, sizeof(game_desc));
 	    return;
 	}
 	if (strcmp(KeyWord, KEYWORD_GAME_SIZEX) == 0)
@@ -251,31 +266,79 @@ void handleLine(void)
 }
 
 /*
+ * trimSpace - removes leading and trailing white space (in place)
+ */
+static char *trimSpace(char *str)
+{
+	char *end;
+
+	while ((*str == ' ') || (*str == '\t'))
+	{
+		str++;
+	}
+	end = str + strlen(str);
+	while ((end > str) && ((end[-1] == ' ') || (end[-1] == '\t') ||
+		(end[-1] == '\n') || (end[-1] == '\r')))
+	{
+		end--;
+	}
+	*end = '\0';
+	return(str);
+}
+
+/*
  * parseConfig - reads in a configuration file and returns TRUE if
  *               no config errors, else returns FALSE
+ *
+ *               Lines are "keyword = value"; the value may be empty
+ *               (for example a player name that hasn't been set yet).
+ *               Blank lines and lines starting with '#' are skipped.
  */
 BOOL parseConfig(void)
 {
+	char *line, *eq, *key, *value;
+	int lineNum = 0;
+
+	/* Each file starts with a clean slate */
+	CfgParseErr=FALSE;
 	/* Loop for each line in the file */
-	while (fgets(ConfigBuf, 2047, CfgHndl) != NULL)
+	while (fgets(ConfigBuf, sizeof(ConfigBuf), CfgHndl) != NULL)
 	{
-	    /* Check for the comment character */
-	    if (ConfigBuf[0] == '#')
+	    lineNum++;
+	    line = trimSpace(ConfigBuf);
+	    /* Skip blank lines and comments */
+	    if ((line[0] == '\0') || (line[0] == '#'))
 	    {
 			continue;
 	    }
-	    if (sscanf(ConfigBuf, "%s = %s", KeyWord, KeyValue) == 2)
+	    eq = strchr(line, '=');
+	    if (eq != NULL)
 	    {
-			handleLine();
+			*eq = '\0';
+			key = trimSpace(line);
+			value = trimSpace(eq + 1);
 	    }
-	    else
+	    if ((eq == NULL) || (key[0] == '\0') ||
+			(strlen(key) >= sizeof(KeyWord)) ||
+			(strlen(value) >= sizeof(KeyValue)))
 	    {
-			if (!CfgParseErr)
+			char msg[64];
+
+			if (eq != NULL)
 			{
-				CfgParseErr=TRUE;
-				fe_puts("*** Invalid configuration line found");
+				*eq = '=';	/* show the line as it was */
 			}
+			CfgParseErr=TRUE;
+			snprintf(msg, sizeof(msg),
+				"*** Invalid configuration line %d: ", lineNum);
+			fe_puts(msg);
+			fe_puts(ConfigBuf);
+			fe_puts("\n");
+			continue;
 	    }
+	    strcpy(KeyWord, key);
+	    strcpy(KeyValue, value);
+	    handleLine();
 	}
 	if (CfgParseErr)
 	{

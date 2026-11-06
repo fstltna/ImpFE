@@ -4,6 +4,7 @@
 
  Copyright (c) 1997-2026
       Marisa Giancarla (marisag@haikumail.online)
+      Official game server and support: https://empiredirectory.net
 
  See the Copyright file included in the distribution
 
