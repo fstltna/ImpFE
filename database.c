@@ -45,6 +45,7 @@ static char rcsid[]="$Id: database.c,v 1.2 2000/05/17 22:51:46 marisa Exp $";
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <errno.h>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -92,7 +93,7 @@ static FILE *ShipFileHndl;
 static FILE *PlanetFileHndl;
 static FILE *ItemFileHndl;
 static FILE *SectorFileHndl;
-static int BitmapFileHndl;
+static int BitmapFileHndl=-1;
 static FILE *PlayerFileHndl;
 static FILE *RaceFileHndl;
 
@@ -121,6 +122,15 @@ void noExt(char *dest, char *src)
  *             Assumes file to be used as a guide has just been selected
  *             via the browser
  */
+/*
+ * dbName - builds the name of one of the database files from the name
+ *          of the config file. Returns FALSE if it would not fit.
+ */
+static BOOL dbName(char *dest, const char *suffix)
+{
+	return(snprintf(dest, 1024, "%s-%s", RawFile, suffix) < 1024);
+}
+
 BOOL openFeDBs(BOOL createIt)
 {
 	int tmp;
@@ -130,21 +140,36 @@ BOOL openFeDBs(BOOL createIt)
 
 	/* Pull selections out of file selector buffer */
 	bzero(locBuf, 4096 * sizeof(char));
-	strcpy(BaseDir, ui_last_directory());
-	strcpy(BaseFile, ui_last_filename());
+	if ((snprintf(BaseDir, sizeof(BaseDir), "%s", ui_last_directory()) >=
+		 (int) sizeof(BaseDir)) ||
+		(snprintf(BaseFile, sizeof(BaseFile), "%s", ui_last_filename()) >=
+		 (int) sizeof(BaseFile)))
+	{
+		fe_puts("*** Database path is too long\n");
+		return(FALSE);
+	}
 	/* Get the file name without an extension */
 	noExt(RawFile, BaseFile);
 	/* Build the rest of the names */
-	(void) sprintf(ShipFile, "%s-ships", RawFile);
-	(void) sprintf(PlanetFile, "%s-planets", RawFile);
-	(void) sprintf(ItemFile, "%s-items", RawFile);
-	(void) sprintf(SectorFile, "%s-sectors", RawFile);
-	(void) sprintf(BitmapFile, "%s-sectors-bitmap", RawFile);
-	(void) sprintf(PlayerFile, "%s-players", RawFile);
-	(void) sprintf(RaceFile, "%s-races", RawFile);
+	if (!dbName(ShipFile, "ships") || !dbName(PlanetFile, "planets") ||
+		!dbName(ItemFile, "items") || !dbName(SectorFile, "sectors") ||
+		!dbName(BitmapFile, "sectors-bitmap") ||
+		!dbName(PlayerFile, "players") || !dbName(RaceFile, "races"))
+	{
+		fe_puts("*** Database file name is too long\n");
+		return(FALSE);
+	}
 	DirtyData=FALSE;
-	/* Set working directory */
-	chdir(BaseDir);
+	/* Set working directory - the database files are relative to it */
+	if (chdir(BaseDir) != 0)
+	{
+		fe_puts("*** Unable to change to the database directory ");
+		fe_puts(BaseDir);
+		fe_puts(": ");
+		fe_puts(strerror(errno));
+		fe_puts("\n");
+		return(FALSE);
+	}
 	/* If creating, create/truncate the files */
 	if (createIt)
 	{
@@ -223,7 +248,26 @@ BOOL openFeDBs(BOOL createIt)
 		/* Create the file length */
 		for (tmp=0; tmp < (sizeof(FeBitmap_t) / 4096) + 1; tmp++)
 		{
-		    write(BitmapFileHndl, locBuf, 4096 * sizeof(char));
+		    if (write(BitmapFileHndl, locBuf, 4096 * sizeof(char)) !=
+				4096 * sizeof(char))
+		    {
+				/* A short file would crash us when mapped (disk full?) */
+				fe_puts("*** Unable to write the bitmap sectors database: ");
+				fe_puts(strerror(errno));
+				fe_puts("\n");
+				fclose(ShipFileHndl);
+				fclose(PlanetFileHndl);
+				fclose(ItemFileHndl);
+				fclose(SectorFileHndl);
+				close(BitmapFileHndl);
+				ShipFileHndl=NULL;
+				PlanetFileHndl=NULL;
+				ItemFileHndl=NULL;
+				SectorFileHndl=NULL;
+				BitmapFileHndl=-1;
+				unlink(BitmapFile);
+				return(FALSE);
+		    }
 		}
 		lseek(BitmapFileHndl, 0, SEEK_SET);
 		ui_browser_append(fd_ImpFeMain->MainBrowser, ">>> sectors-bitmap database created\n");
@@ -554,7 +598,7 @@ BOOL readShip(FeShip_t *shBuf, unsigned long shNum)
 	}
 	if (fseek(ShipFileHndl, shNum * sizeof(FeShip_t), SEEK_SET) != 0)
 	{
-	    fprintf(stderr, "*** Error seeking to ship %u!\n", shNum);
+	    fprintf(stderr, "*** Error seeking to ship %lu!\n", shNum);
 	    return(FALSE);
 	}
 	/* Attempt to load the ship */
@@ -582,14 +626,14 @@ BOOL writeShip(FeShip_t *shBuf, unsigned long shNum)
 	/* Try to seek to the correct spot */
 	if (fseek(ShipFileHndl, shNum * sizeof(FeShip_t), SEEK_SET) != 0)
 	{
-	    fprintf(stderr, "*** Write error seeking to ship %u!\n", shNum);
+	    fprintf(stderr, "*** Write error seeking to ship %lu!\n", shNum);
 	    return(FALSE);
 	}
 	/* Attempt to write the ship */
 	if (fwrite(shBuf, sizeof(char), sizeof(FeShip_t), ShipFileHndl) != sizeof(FeShip_t))
 	{
 	    fileErr=ferror(ShipFileHndl);
-	    fprintf(stderr, "Got write error %d in saving ship %u to ships file\n",
+	    fprintf(stderr, "Got write error %d in saving ship %lu to ships file\n",
 				fileErr, shNum);
 	    clearerr(ShipFileHndl);
 	    return(FALSE);
@@ -615,7 +659,7 @@ BOOL readPlanet(FePlanet_t *plBuf, unsigned long plNum)
 	}
 	if (fseek(PlanetFileHndl, plNum * sizeof(FePlanet_t), SEEK_SET) != 0)
 	{
-	    fprintf(stderr, "*** Error seeking to planet %u!\n", plNum);
+	    fprintf(stderr, "*** Error seeking to planet %lu!\n", plNum);
 	    return(FALSE);
 	}
 	/* Attempt to load the planet */
@@ -645,14 +689,14 @@ BOOL writePlanet(FePlanet_t *plBuf, unsigned long plNum)
 	/* Try to seek to the correct spot */
 	if (fseek(PlanetFileHndl, plNum * sizeof(FePlanet_t), SEEK_SET) != 0)
 	{
-	    fprintf(stderr, "*** Write error seeking to planet %u!\n", plNum);
+	    fprintf(stderr, "*** Write error seeking to planet %lu!\n", plNum);
 	    return(FALSE);
 	}
 	/* Attempt to write the planet */
 	if (fwrite(plBuf, sizeof(char), sizeof(FePlanet_t), PlanetFileHndl) != sizeof(FePlanet_t))
 	{
 	    fileErr=ferror(PlanetFileHndl);
-	    fprintf(stderr, "Got write error %d in saving ship %u to planets file\n",
+	    fprintf(stderr, "Got write error %d in saving ship %lu to planets file\n",
 				fileErr, plNum);
 	    clearerr(PlanetFileHndl);
 	    return(FALSE);
@@ -673,7 +717,7 @@ BOOL readItem(FeItem_t *itBuf, unsigned long itNum)
 	}
 	if (fseek(ItemFileHndl, itNum * sizeof(FeItem_t), SEEK_SET) != 0)
 	{
-	    fprintf(stderr, "*** Error seeking to item %u!\n", itNum);
+	    fprintf(stderr, "*** Error seeking to item %lu!\n", itNum);
 	    return(FALSE);
 	}
 	/* Attempt to load the item */
@@ -700,14 +744,14 @@ BOOL writeItem(FeItem_t *itBuf, unsigned long itNum)
 	/* Try to seek to the correct spot */
 	if (fseek(ItemFileHndl, itNum * sizeof(FeItem_t), SEEK_SET) != 0)
 	{
-	    fprintf(stderr, "*** Write error seeking to item %u!\n", itNum);
+	    fprintf(stderr, "*** Write error seeking to item %lu!\n", itNum);
 	    return(FALSE);
 	}
 	/* Attempt to write the item */
 	if (fwrite(itBuf, sizeof(char), sizeof(FeItem_t), ItemFileHndl) != sizeof(FeItem_t))
 	{
 	    fileErr=ferror(ItemFileHndl);
-	    fprintf(stderr, "Got write error %d in saving item %u to items file\n",
+	    fprintf(stderr, "Got write error %d in saving item %lu to items file\n",
 				fileErr, itNum);
 	    clearerr(ItemFileHndl);
 	    return(FALSE);

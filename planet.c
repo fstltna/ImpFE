@@ -48,7 +48,7 @@ void buildPlCensus(void)
 	ULONG plNum, crew;
 	USHORT eff;
 	FePlanet_t tmpPlanet;
-	char workBuf[160], nameBuf[10], plClass, location[15], crewBuf[5],
+	char workBuf[160], nameBuf[10], plClass, location[24], crewBuf[24],
 		tBuff[28], plName[10];
 
 	/* Clear the existing contents, if any */
@@ -56,15 +56,15 @@ void buildPlCensus(void)
 	/* Loop for each known planet */
 	for (plNum=0; plNum < next_planet; plNum++)
 	{
-fprintf(stderr, "*** plNum is %u!\n", plNum);
-fprintf(stderr, "*** next_planet is %u!\n", next_planet);
+fprintf(stderr, "*** plNum is %lu!\n", plNum);
+fprintf(stderr, "*** next_planet is %lu!\n", next_planet);
 		/* Make sure the ship has been seen */
 		if (readPlanet(&tmpPlanet, plNum))
 		{
-fprintf(stderr, "*** readPlanet ok %u!\n", plNum);
+fprintf(stderr, "*** readPlanet ok %lu!\n", plNum);
 			if (tmpPlanet.last_seen != 0)
 			{
-fprintf(stderr, "*** tempPlanet ok %u!\n", plNum);
+fprintf(stderr, "*** tempPlanet ok %lu!\n", plNum);
 			if (tmpPlanet.owner != 0)
 			{
 				strncpy(nameBuf, Player[tmpPlanet.owner].name, 9);
@@ -90,20 +90,20 @@ fprintf(stderr, "*** tempPlanet ok %u!\n", plNum);
 				tmpPlanet.quant[it_officers];
 			if (crew < 1000)
 			{
-				sprintf(crewBuf, "%3u", crew);
+				sprintf(crewBuf, "%3lu", crew);
 			}
 			else if (crew < 10000)
 			{
-				sprintf(crewBuf, "%2uX", crew / 100);
+				sprintf(crewBuf, "%2luX", crew / 100);
 			}
 			else
 			{
-				sprintf(crewBuf, "%2uK", crew / 1000);
+				sprintf(crewBuf, "%2luK", crew / 1000);
 			}
 			sprintf(location, "%4u, %4u", tmpPlanet.pl_row, tmpPlanet.pl_col);
 			strcpy(tBuff, ctime(&tmpPlanet.last_seen));
 			tBuff[19]='\0';
-			sprintf(workBuf, "%8u  %8s   %8s    %c   %s  %s  %3u  %3u %3u %3u %3u %3u  %s", plNum,
+			sprintf(workBuf, "%8lu  %8s   %8s    %c   %s  %s  %3u  %3u %3u %3u %3u %3u  %s", plNum,
 					plName, nameBuf, plClass, location, crewBuf, tmpPlanet.eff,
 					tmpPlanet.gas, tmpPlanet.water, tmpPlanet.minr, tmpPlanet.gold, tmpPlanet.polut, &tBuff[4]);
 			ui_browser_add_line(fd_PlanetCensusForm->PlBrowse, workBuf);
@@ -164,7 +164,7 @@ void buildPlDetDisp(void)
 			{
 				itType='?';
 			}
-			sprintf(workBuf, "%8u  %c  %3u  %3u  %5u", itNum,
+			sprintf(workBuf, "%8lu  %c  %3u  %3u  %5u", itNum,
 					itType, tmpItem.it_tf, tmpItem.efficiency,
 					tmpItem.weight);
 			ui_browser_add_line(fd_PlanetDetailForm->PlDetItem, workBuf);
@@ -225,9 +225,9 @@ void buildPlDetDisp(void)
 	}
 	sprintf(workBuf, "%u", tmpPlanet.RF);
 	ui_set_text(fd_PlanetDetailForm->RF, workBuf);
-	sprintf(workBuf, "%u", tmpPlanet.ResLv);
+	sprintf(workBuf, "%lu", tmpPlanet.ResLv);
 	ui_set_text(fd_PlanetDetailForm->Research, workBuf);
-	sprintf(workBuf, "%u", tmpPlanet.TechLv);
+	sprintf(workBuf, "%lu", tmpPlanet.TechLv);
 	ui_set_text(fd_PlanetDetailForm->Tech, workBuf);
 	sprintf(workBuf, "%u", tmpPlanet.pl_btu);
 	ui_set_text(fd_PlanetDetailForm->BTU, workBuf);
@@ -258,7 +258,7 @@ void buildPlDetDisp(void)
 	strcpy(workBuf, ctime(&tmpPlanet.last_seen));
 	workBuf[24]='\0'; /* strip off NL */
 	ui_set_text(fd_PlanetDetailForm->Seen, workBuf);
-	sprintf(workBuf, "%u", LastPlanet);
+	sprintf(workBuf, "%lu", LastPlanet);
 	ui_set_text(fd_PlanetDetailForm->PlNum, workBuf);
 	sprintf(workBuf, "%u,%u", tmpPlanet.pl_row, tmpPlanet.pl_col);
 	ui_set_text(fd_PlanetDetailForm->RowCol, workBuf);

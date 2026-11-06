@@ -41,6 +41,7 @@ static char rcsid[]="$Id: feconfig.c,v 1.4 2000/05/26 23:38:55 marisa Exp $";
 #include "config.h"
 #include <sys/types.h>
 #include <unistd.h>
+#include <errno.h>
 #include <stdio.h>
 #ifdef I_STRING
 #include <string.h>
@@ -54,7 +55,7 @@ static char rcsid[]="$Id: feconfig.c,v 1.4 2000/05/26 23:38:55 marisa Exp $";
 #include "version.h"
 
 static char ConfigBuf[2048];
-static char PickedFile[256];
+static char PickedFile[4096];
 static char KeyWord[80];
 static char KeyValue[1025];
 
@@ -180,7 +181,7 @@ void handleLine(void)
 	}
 	if (strcmp(KeyWord, KEYWORD_HIGH_SHIP) == 0)
 	{
-	    if(sscanf(KeyValue, "%u", &tmpLong) != 1)
+	    if(sscanf(KeyValue, "%lu", &tmpLong) != 1)
 	    {
 			fe_puts("Invalid setting for " KEYWORD_HIGH_SHIP " in config file\n");
 			CfgParseErr=TRUE;
@@ -193,7 +194,7 @@ void handleLine(void)
 	}
 	if (strcmp(KeyWord, KEYWORD_HIGH_PLANET) == 0)
 	{
-	    if(sscanf(KeyValue, "%u", &tmpLong) != 1)
+	    if(sscanf(KeyValue, "%lu", &tmpLong) != 1)
 	    {
 			fe_puts("Invalid setting for " KEYWORD_HIGH_PLANET " in config file\n");
 			CfgParseErr=TRUE;
@@ -206,7 +207,7 @@ void handleLine(void)
 	}
 	if (strcmp(KeyWord, KEYWORD_HIGH_ITEM) == 0)
 	{
-	    if(sscanf(KeyValue, "%u", &tmpLong) != 1)
+	    if(sscanf(KeyValue, "%lu", &tmpLong) != 1)
 	    {
 			fe_puts("Invalid setting for " KEYWORD_HIGH_ITEM " in config file\n");
 			CfgParseErr=TRUE;
@@ -219,7 +220,7 @@ void handleLine(void)
 	}
 	if (strcmp(KeyWord, KEYWORD_HOME_PLAN) == 0)
 	{
-	    if(sscanf(KeyValue, "%u", &tmpLong) != 1)
+	    if(sscanf(KeyValue, "%lu", &tmpLong) != 1)
 	    {
 			fe_puts("Invalid setting for " KEYWORD_HOME_PLAN " in config file\n");
 			CfgParseErr=TRUE;
@@ -284,6 +285,25 @@ BOOL parseConfig(void)
 }
 
 /*
+ * enterDbDir - changes to the directory of the last file the user
+ *              picked, where the database files live. Reports and
+ *              returns FALSE if it can't.
+ */
+static BOOL enterDbDir(void)
+{
+	if (chdir(ui_last_directory()) != 0)
+	{
+		fe_puts("*** Unable to change to directory ");
+		fe_puts(ui_last_directory());
+		fe_puts(": ");
+		fe_puts(strerror(errno));
+		fe_puts("\n");
+		return(FALSE);
+	}
+	return(TRUE);
+}
+
+/*
  * handleOpenCfg - Handles the user selecting the "file->open" menu item
  */
 void handleOpenCfg(void)
@@ -299,9 +319,12 @@ void handleOpenCfg(void)
 		return;
 	}
 	/* Set the directory */
-	chdir(ui_last_directory());
+	if (!enterDbDir())
+	{
+		return;
+	}
 	/* Copy out the file name */
-	strncpy(PickedFile, selFile, 255);
+	snprintf(PickedFile, sizeof(PickedFile), "%s", selFile);
 	/* Try to open the config file */
 	if ((CfgHndl=fopen(PickedFile, "r")) == NULL)
 	{
@@ -408,10 +431,10 @@ void saveConfig(void)
 	fprintf(CfgHndl, "%s = %s\n", KEYWORD_GAME_DESC, ConfigBuf);
 	fprintf(CfgHndl, "%s = %u\n", KEYWORD_GAME_SIZEX, game_sizex);
 	fprintf(CfgHndl, "%s = %u\n", KEYWORD_GAME_SIZEY, game_sizey);
-	fprintf(CfgHndl, "%s = %u\n", KEYWORD_HIGH_SHIP, next_ship);
-	fprintf(CfgHndl, "%s = %u\n", KEYWORD_HIGH_PLANET, next_planet);
-	fprintf(CfgHndl, "%s = %u\n", KEYWORD_HIGH_ITEM, next_item);
-	fprintf(CfgHndl, "%s = %u\n", KEYWORD_HOME_PLAN, home_planet);
+	fprintf(CfgHndl, "%s = %lu\n", KEYWORD_HIGH_SHIP, next_ship);
+	fprintf(CfgHndl, "%s = %lu\n", KEYWORD_HIGH_PLANET, next_planet);
+	fprintf(CfgHndl, "%s = %lu\n", KEYWORD_HIGH_ITEM, next_item);
+	fprintf(CfgHndl, "%s = %lu\n", KEYWORD_HOME_PLAN, home_planet);
 	fprintf(CfgHndl, "%s = %u\n", KEYWORD_PLAYER_NUM, player_num);
 }
 
@@ -427,8 +450,8 @@ void handleSaveCfg(void)
 	{
 	    return;
 	}
-	/* Set the directory */
-	chdir(ui_last_directory());
+	/* Set the directory (the config path itself is absolute) */
+	(void) enterDbDir();
 	/* Try to open the config file */
 	if ((CfgHndl=fopen(PickedFile, "w")) == NULL)
 	{
@@ -458,9 +481,12 @@ void handleNewCfg(void)
 		return;
 	}
 	/* Set the directory */
-	chdir(ui_last_directory());
+	if (!enterDbDir())
+	{
+		return;
+	}
 	/* Copy out the file name */
-	strncpy(PickedFile, selFile, 255);
+	snprintf(PickedFile, sizeof(PickedFile), "%s", selFile);
 	/* Try to open the config file */
 	if ((CfgHndl=fopen(PickedFile, "w")) == NULL)
 	{

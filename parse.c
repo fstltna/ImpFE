@@ -276,7 +276,7 @@ void handlePowerRpt(const char *line)
 	DirtyData=TRUE;
 	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/*  # Plan | # civ | # mil | sh | gun | pl | bars | % | ships | $$$ | power | Name */
-	if ((tmp=sscanf(line, "%u %u %u %u %u %u %u %u %u %d %d %s",
+	if ((tmp=sscanf(line, "%lu %lu %lu %lu %lu %lu %lu %lu %lu %ld %d %s",
 			   &plan, &civ, &mil, &sh, &gun, &pl, &bar, &pct, &ship,
 			   &cash, &power, playName)) != 12)
 	{
@@ -551,10 +551,10 @@ void handlePlProd1(const char *line)
 	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/* All of the below are scaled production amounts */
 	/* Civ | Mil | Tech | Res | Edu | OCS | OM | GM | ATn | FTn | Wea | Eng | Hul | Misl | Pln | Elc | Cash | Pl # |*/
-	if ((line[0] != '|') || (line[4] != '|') || (line[8] != '|') ||
-		(line[68] != '|'))
+	if ((strlen(line) < 69) || (line[0] != '|') || (line[4] != '|') ||
+		(line[8] != '|') || (line[68] != '|'))
 	{
-	    fprintf(stderr, "*** Invalid planet production1 format '%d'\n", tmp);
+	    fprintf(stderr, "*** Invalid planet production1 format '%s'\n", line);
 	}
 	else
 	{
@@ -659,10 +659,10 @@ void handlePlProd2(const char *line)
 	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/* All of the below are production percentages (0-100) */
 	/* Civ | Mil | Tech | Res | Edu | OCS | OM | GM | ATn | FTn | Wea | Eng | Hul | Misl | Pln | Elc | Cash | Pl # |*/
-	if ((line[0] != '|') || (line[4] != '|') || (line[8] != '|') ||
-		(line[68] != '|'))
+	if ((strlen(line) < 69) || (line[0] != '|') || (line[4] != '|') ||
+		(line[8] != '|') || (line[68] != '|'))
 	{
-	    fprintf(stderr, "*** Invalid planet production1 format '%d'\n", tmp);
+	    fprintf(stderr, "*** Invalid planet production2 format '%s'\n", line);
 	}
 	else
 	{
@@ -764,7 +764,7 @@ void handlePlGeo(const char *line)
 	DirtyData=TRUE;
 	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/* PC | Sz | Eff | Min | Gold | Pol | Gas | Wat | Mob | Ore | Bar | TF | ResL | Pl # | Position */
-	if ((tmp=sscanf(line, "%s %u %u %u %u %u %u %u %u %u %u %u %u %u %s",
+	if ((tmp=sscanf(line, "%s %u %u %u %u %u %u %u %u %u %u %u %u %lu %s",
 					pc, &size, &eff, &minr, &gold, &polut, &gas, &water,
 					&mobil, &ore, &bars, &TF, &ResLv, &plNum, posit)) != 15)
 	{
@@ -843,7 +843,7 @@ void handlePlPop(const char *line)
 	DirtyData=TRUE;
 	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 	/* PC | Civ | Sci | Mil | Ofc | BTU | Pop% | PF | Race | Pl # | Name */
-	tmp=sscanf(line, "%s %u %u %u %u %u %u %u %u %u %s",
+	tmp=sscanf(line, "%s %u %u %u %u %u %u %u %u %lu %s",
 					pc, &civil, &scien, &mil, &ofc, &BTU, &PopPct, &PF,
 					&race, &plNum, name);
 	/* Handle the fact they may not have a planet name... */
@@ -1182,7 +1182,7 @@ void handlePlDump(const char *line)
 	if (strlen(line) != 229)
 	{
 		/* Nope! */
-		fprintf(stderr, "Invalid dump line length: %u\n", strlen(line));
+		fprintf(stderr, "Invalid dump line length: %zu\n", strlen(line));
 		return;
 	}
 	/* Make sure this gets saved */
@@ -1191,15 +1191,15 @@ void handlePlDump(const char *line)
 	pos=&line[0];
 	memcpy(workBuf, pos, 8 * sizeof(char));
 	workBuf[8]='\0';
-	(void) sscanf(workBuf, "%xl", &plNum);
+	(void) sscanf(workBuf, "%lx", &plNum);
 	pos += 8 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &row);
+	(void) sscanf(workBuf, "%lx", &row);
 	pos += 4 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &col);
+	(void) sscanf(workBuf, "%lx", &col);
 	pos += 4 * sizeof(char);
 	(void) readPlanet(&tmpPlan, plNum);
 	(void)gettimeofday(&tp, NULL);
@@ -1212,11 +1212,11 @@ void handlePlDump(const char *line)
 	}
 	memcpy(workBuf, pos, 8 * sizeof(char));
 	workBuf[8]='\0';
-	(void) sscanf(workBuf, "%xl", &tmpPlan.TechLv);
+	(void) sscanf(workBuf, "%lx", &tmpPlan.TechLv);
 	pos += 8 * sizeof(char);
 	memcpy(workBuf, pos, 8 * sizeof(char));
 	workBuf[8]='\0';
-	(void) sscanf(workBuf, "%xl", &tmpPlan.ResLv);
+	(void) sscanf(workBuf, "%lx", &tmpPlan.ResLv);
 	pos += 8 * sizeof(char);
 	/* ship over update time */
 	pos += 8 * sizeof(char);
@@ -1282,47 +1282,47 @@ void handlePlDump(const char *line)
 	pos += 1 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &val);
+	(void) sscanf(workBuf, "%lx", &val);
 	tmpPlan.mobil = (UBYTE) val;
 	pos += 4 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &val);
+	(void) sscanf(workBuf, "%lx", &val);
 	tmpPlan.eff = (UBYTE) val;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &val);
+	(void) sscanf(workBuf, "%lx", &val);
 	tmpPlan.minr = (UBYTE) val;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &val);
+	(void) sscanf(workBuf, "%lx", &val);
 	tmpPlan.gold = (UBYTE) val;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &val);
+	(void) sscanf(workBuf, "%lx", &val);
 	tmpPlan.polut = (UBYTE) val;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &val);
+	(void) sscanf(workBuf, "%lx", &val);
 	tmpPlan.gas = (UBYTE) val;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &val);
+	(void) sscanf(workBuf, "%lx", &val);
 	tmpPlan.water = (UBYTE) val;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 1 * sizeof(char));
 	workBuf[1]='\0';
-	(void) sscanf(workBuf, "%xl", &val);
+	(void) sscanf(workBuf, "%lx", &val);
 	tmpPlan.size = (UBYTE) val;
 	pos += 1 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &val);
+	(void) sscanf(workBuf, "%lx", &val);
 	tmpPlan.pl_btu = (USHORT) val;
 	pos += 4 * sizeof(char);
 	/* Skip over checkpointed field */
@@ -1339,7 +1339,7 @@ void handlePlDump(const char *line)
 	{
 		memcpy(workBuf, pos, 4 * sizeof(char));
 		workBuf[4]='\0';
-		(void) sscanf(workBuf, "%xl", &val);
+		(void) sscanf(workBuf, "%lx", &val);
 		tmpPlan.quant[tmp] = (USHORT) val;
 		pos += 4 * sizeof(char);
 	}
@@ -1347,12 +1347,12 @@ void handlePlDump(const char *line)
 	{
 		memcpy(workBuf, pos, 4 * sizeof(char));
 		workBuf[4]='\0';
-		(void) sscanf(workBuf, "%xl", &val);
+		(void) sscanf(workBuf, "%lx", &val);
 		tmpPlan.prod[tmp] = (USHORT) val;
 		pos += 4 * sizeof(char);
 		memcpy(workBuf, pos, 2 * sizeof(char));
 		workBuf[2]='\0';
-		(void) sscanf(workBuf, "%xl", &val);
+		(void) sscanf(workBuf, "%lx", &val);
 		tmpPlan.workPer[tmp] = (UBYTE) val;
 		pos += 2 * sizeof(char);
 	}
@@ -1376,7 +1376,7 @@ void handlePlScan(const char *line)
 	if (strlen(line) != 65)
 	{
 		/* Nope! */
-		fprintf(stderr, "Invalid planet scan line length: %u\n", strlen(line));
+		fprintf(stderr, "Invalid planet scan line length: %zu\n", strlen(line));
 		return;
 	}
 	/* Format of scan line: Any unknown field will be zero
@@ -1407,15 +1407,15 @@ void handlePlScan(const char *line)
 	pos=&line[0];
 	memcpy(workBuf, pos, 8 * sizeof(char));
 	workBuf[8]='\0';
-	(void) sscanf(workBuf, "%xl", &plNum);
+	(void) sscanf(workBuf, "%lx", &plNum);
 	pos += 8 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &row);
+	(void) sscanf(workBuf, "%lx", &row);
 	pos += 4 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &col);
+	(void) sscanf(workBuf, "%lx", &col);
 	pos += 4 * sizeof(char);
 	(void) readPlanet(&tmpPlan, plNum);
 	(void)gettimeofday(&tp, NULL);
@@ -1468,7 +1468,7 @@ void handlePlScan(const char *line)
 	pos += 1 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	if (tmp != 0)
 	{
 		/* If player owns this planet, just force a dump */
@@ -1485,62 +1485,62 @@ void handlePlScan(const char *line)
 	pos += 12 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpPlan.size = tmp;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpPlan.polut = tmp;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpPlan.minr = tmp;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpPlan.gold = tmp;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpPlan.gas = tmp;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpPlan.water = tmp;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpPlan.quant[it_ore] = tmp;
 	pos += 4 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpPlan.quant[it_bars] = tmp;
 	pos += 4 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpPlan.eff = tmp;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpPlan.TF = tmp;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpPlan.quant[it_civilians] = tmp;
 	pos += 4 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpPlan.quant[it_military] = tmp;
 	pos += 4 * sizeof(char);
 
@@ -1559,7 +1559,7 @@ void handleShScan(const char *line)
 	if (strlen(line) != 65)
 	{
 		/* Nope! */
-		fprintf(stderr, "Invalid ship scan line length: %u\n", strlen(line));
+		fprintf(stderr, "Invalid ship scan line length: %zu\n", strlen(line));
 		return;
 	}
 	/* Format of scan line: Any unknown field will be zero
@@ -1588,15 +1588,15 @@ void handleShScan(const char *line)
 	pos=&line[0];
 	memcpy(workBuf, pos, 8 * sizeof(char));
 	workBuf[8]='\0';
-	(void) sscanf(workBuf, "%xl", &shNum);
+	(void) sscanf(workBuf, "%lx", &shNum);
 	pos += 8 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &row);
+	(void) sscanf(workBuf, "%lx", &row);
 	pos += 4 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &col);
+	(void) sscanf(workBuf, "%lx", &col);
 	pos += 4 * sizeof(char);
 	(void) readShip(&tmpShip, shNum);
 	(void)gettimeofday(&tp, NULL);
@@ -1635,7 +1635,7 @@ void handleShScan(const char *line)
 	pos += 1 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	if (tmp != 0)
 	{
 		/* If player owns this planet, just force a dump */
@@ -1652,54 +1652,54 @@ void handleShScan(const char *line)
 	pos += 12 * sizeof(char);
 	memcpy(workBuf, pos, 3 * sizeof(char));
 	workBuf[3]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpShip.num_eng = tmp;
 	pos += 3 * sizeof(char);
 	memcpy(workBuf, pos, 3 * sizeof(char));
 	workBuf[3]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpShip.num_wpn = tmp;
 	pos += 3 * sizeof(char);
 	memcpy(workBuf, pos, 3 * sizeof(char));
 	workBuf[3]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpShip.engTF = tmp;
 	pos += 3 * sizeof(char);
 	/* Skip over weapon TF */
 	pos += 3 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpShip.efficiency = tmp;
 	pos += 2 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpShip.cargo = tmp;
 	pos += 4 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpShip.num_civ = tmp;
 	pos += 4 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpShip.num_mil = tmp;
 	pos += 4 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpShip.shields = tmp;
 	pos += 4 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpShip.energy = tmp;
 	pos += 4 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &tmp);
+	(void) sscanf(workBuf, "%lx", &tmp);
 	tmpShip.armourLeft = tmp;
 
 	(void) writeShip(&tmpShip, shNum);
@@ -1717,7 +1717,7 @@ void handleShipScDet(const char *line)
 	if (strlen(line) != 22)
 	{
 		/* Nope! */
-		fprintf(stderr, "Invalid ship detected via scan line length: %u\n", strlen(line));
+		fprintf(stderr, "Invalid ship detected via scan line length: %zu\n", strlen(line));
 		return;
 	}
 	/* Format of scan line: Any unknown field will be zero
@@ -1734,7 +1734,7 @@ void handleShipScDet(const char *line)
 	pos=&line[0];
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &owner);
+	(void) sscanf(workBuf, "%lx", &owner);
 	pos += 4 * sizeof(char);
 	switch(*pos)
 	{
@@ -1765,15 +1765,15 @@ void handleShipScDet(const char *line)
 	pos += 1 * sizeof(char);
 	memcpy(workBuf, pos, 8 * sizeof(char));
 	workBuf[8]='\0';
-	(void) sscanf(workBuf, "%xl", &shNum);
+	(void) sscanf(workBuf, "%lx", &shNum);
 	pos += 8 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &row);
+	(void) sscanf(workBuf, "%lx", &row);
 	pos += 4 * sizeof(char);
 	memcpy(workBuf, pos, 4 * sizeof(char));
 	workBuf[4]='\0';
-	(void) sscanf(workBuf, "%xl", &col);
+	(void) sscanf(workBuf, "%lx", &col);
 	
 	(void) readShip(&tmpShip, shNum);
 	(void)gettimeofday(&tp, NULL);
@@ -1988,10 +1988,10 @@ void fe_parse(const char *buf)
 								if (atoi(&buf[16]) != home_planet)
 								{
 									home_planet=atoi(&buf[16]);
-									sprintf(cmdBuf, "census geo %u\n",
+									sprintf(cmdBuf, "census geo %lu\n",
 											home_planet);
 									addCmd(cmdBuf, QUE_HIGH);
-									sprintf(cmdBuf, "census pop %u\n",
+									sprintf(cmdBuf, "census pop %lu\n",
 											home_planet);
 									addCmd(cmdBuf, QUE_MED);
 									DirtyData=TRUE;

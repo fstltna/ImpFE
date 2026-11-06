@@ -5,6 +5,12 @@ Changes by date
 * Converted the GUI from XForms to GTK 3
 * Replaced autoconf with a plain Makefile (Linux only)
 * Fixed a buffer overflow that crashed the planet census
+* Fixed reading numbers into 64-bit variables in parse.c and feconfig.c
+  (counts loaded from .fe files and server reports could be garbage)
+* Builds with no compiler warnings: fixed the remaining printf formats,
+  report failures to enter the database directory or to create the
+  sector bitmap (a short bitmap file used to crash ImpFE), and bounded
+  the file name and command buffers
 =20150706=
 bumped max players to 254
 =20150530=

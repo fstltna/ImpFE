@@ -48,7 +48,7 @@ void buildShCensus(void)
 	ULONG shNum, crew;
 	USHORT eff;
 	FeShip_t tmpShip;
-	char workBuf[160], nameBuf[10], shType, location[15], crewBuf[5],
+	char workBuf[160], nameBuf[10], shType, location[24], crewBuf[24],
 		tBuff[28], shName[10];
 
 	/* Clear the existing contents, if any */
@@ -57,15 +57,15 @@ void buildShCensus(void)
 fprintf(stderr, "*** start of loop\n");
 	for (shNum=0; shNum < next_ship; shNum++)
 	{
-fprintf(stderr, "*** shNum is %u!\n", shNum);
-fprintf(stderr, "*** next_ship is %u!\n", next_ship);
+fprintf(stderr, "*** shNum is %lu!\n", shNum);
+fprintf(stderr, "*** next_ship is %lu!\n", next_ship);
 		/* Make sure the ship has been seen */
 		if (readShip(&tmpShip, shNum))
 		{
-fprintf(stderr, "*** readShip ok %u!\n", shNum);
+fprintf(stderr, "*** readShip ok %lu!\n", shNum);
 			if(tmpShip.last_seen != 0)
 			{
-fprintf(stderr, "*** tempship ok %u!\n", shNum);
+fprintf(stderr, "*** tempship ok %lu!\n", shNum);
 				if (tmpShip.owner != 0)
 				{
 fprintf(stderr, "*** owner %u!\n", tmpShip.owner);
@@ -91,24 +91,24 @@ fprintf(stderr, "*** ship type unknown!\n");
 				}
 				crew = tmpShip.num_civ + tmpShip.num_mil + tmpShip.num_sci +
 					tmpShip.num_ofc;
-fprintf(stderr, "*** ship crew %u!\n", crew);
+fprintf(stderr, "*** ship crew %lu!\n", crew);
 				if (crew < 1000)
 				{
-					sprintf(crewBuf, "%3u", crew);
+					sprintf(crewBuf, "%3lu", crew);
 				}
 				else if (crew < 10000)
 				{
-					sprintf(crewBuf, "%2uX", crew / 100);
+					sprintf(crewBuf, "%2luX", crew / 100);
 				}
 				else
 				{
-					sprintf(crewBuf, "%2uK", crew / 1000);
+					sprintf(crewBuf, "%2luK", crew / 1000);
 				}
 fprintf(stderr, "*** about to set ship location\n");
 				sprintf(location, "%4u, %4u", tmpShip.sh_row, tmpShip.sh_col);
 				strcpy(tBuff, ctime(&tmpShip.last_seen));
 				tBuff[19]='\0';
-				sprintf(workBuf, "%8u  %8s   %8s    %c   %s  %s %3u %s", shNum,
+				sprintf(workBuf, "%8lu  %8s   %8s    %c   %s  %s %3u %s", shNum,
 						shName, nameBuf, shType, location, crewBuf, tmpShip.efficiency,
 						&tBuff[4]);
 fprintf(stderr, "*** about to add browser line\n");
@@ -206,7 +206,7 @@ void buildShDetDisp(void)
 				/* Not installed, just being carried */
 				inst=' ';
 			}
-			sprintf(workBuf, "%8u  %c  %3u  %3u  %5u %c", itNum,
+			sprintf(workBuf, "%8lu  %c  %3u  %3u  %5u %c", itNum,
 					itType, tmpItem.it_tf, tmpItem.efficiency,
 					tmpItem.weight, inst);
 			ui_browser_add_line(fd_ShipDetailForm->ShDetItem, workBuf);
@@ -275,7 +275,7 @@ void buildShDetDisp(void)
 	strcpy(workBuf, ctime(&tmpShip.last_seen));
 	workBuf[24]='\0'; /* strip off NL */
 	ui_set_text(fd_ShipDetailForm->Seen, workBuf);
-	sprintf(workBuf, "%u", LastShip);
+	sprintf(workBuf, "%lu", LastShip);
 	ui_set_text(fd_ShipDetailForm->ShNum, workBuf);
 	sprintf(workBuf, "%u,%u", tmpShip.sh_row, tmpShip.sh_col);
 	ui_set_text(fd_ShipDetailForm->RowCol, workBuf);
@@ -290,7 +290,7 @@ void buildShDetDisp(void)
 	ui_set_text(fd_ShipDetailForm->Owner, workBuf);
 	if (tmpShip.flags & BF_ONPLAN)
 	{
-		sprintf(workBuf, "Ship is on planet %u", tmpShip.planet);
+		sprintf(workBuf, "Ship is on planet %lu", tmpShip.planet);
 		ui_set_text(fd_ShipDetailForm->Where, workBuf);
 	}
 	else

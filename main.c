@@ -167,7 +167,7 @@ void setDefaults(void)
 int file_exists(const char * filename)
 {
 	FILE *file;
-    if (file = fopen(filename, "r"))
+    if ((file = fopen(filename, "r")) != NULL)
     {
         fclose(file);
         return(1);

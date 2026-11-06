@@ -93,7 +93,7 @@ int addCmd(const char *line, int priority)
 		if (CmdArray[tmp].pri == QUE_AVAIL)
 		{
 			CmdArray[tmp].pri = priority;
-			strncpy(CmdArray[tmp].cmdbuf, line, (MAX_CMD_LEN-1) * sizeof(char));
+			snprintf(CmdArray[tmp].cmdbuf, sizeof(CmdArray[tmp].cmdbuf), "%s", line);
 			NumCmds++;
 			sprintf(locBuf, "%d", NumCmds);
 			ui_set_text(fd_ImpFeMain->QueueDisp, locBuf);
@@ -125,7 +125,7 @@ BOOL modCmd(int pos, const char *line, int priority)
 		return(FALSE);
 	}
 	CmdArray[pos].pri = priority;
-	strcpy(locBuf, line);
+	snprintf(locBuf, sizeof(locBuf), "%s", line);
 	len = strlen(locBuf);
 	/* reconvert the NL characters */
 	for (point = 0; point < len; point++)
@@ -135,7 +135,7 @@ BOOL modCmd(int pos, const char *line, int priority)
 			locBuf[point] = '\n';
 		}
 	}
-	strncpy(CmdArray[pos].cmdbuf, locBuf, (MAX_CMD_LEN-1) * sizeof(char));
+	snprintf(CmdArray[pos].cmdbuf, sizeof(CmdArray[pos].cmdbuf), "%s", locBuf);
 	if (ui_window_visible(fd_CommandForm->CommandForm))
 	{
 		buildCmdList();
@@ -439,7 +439,12 @@ void loadCmdQueue(void)
 #endif
 
 	/* Build up the config file name */
-	sprintf(qfName, "%s-commands", RawFile);
+	if (snprintf(qfName, sizeof(qfName), "%s-commands", RawFile) >=
+		(int) sizeof(qfName))
+	{
+		fe_puts("*** Command queue file name is too long\n");
+		return;
+	}
 	/* See if we can load the file */
 	if ((qFile=fopen(qfName, "r")) != NULL)
 	{
@@ -485,7 +490,12 @@ void saveCmdQueue(void)
 		return;
 	}
 	/* Build up the config file name */
-	sprintf(qfName, "%s-commands", RawFile);
+	if (snprintf(qfName, sizeof(qfName), "%s-commands", RawFile) >=
+		(int) sizeof(qfName))
+	{
+		fe_puts("*** Command queue file name is too long\n");
+		return;
+	}
 	/* See if we can create the file */
 	if ((qFile=fopen(qfName, "w")) != NULL)
 	{
