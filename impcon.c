@@ -453,6 +453,12 @@ BOOL cmd_connect(BOOL kill_it)
 	ConnTimedOut=FALSE;
 	ConnTimer=g_timeout_add_seconds(CONNECT_TIMEOUT_SECS, connectTimeout, NULL);
 	client=g_socket_client_new();
+	/*
+	 * Imperium is a plain TCP connection, so desktop proxy settings
+	 * (web proxies) don't apply. Looking them up also fails inside a
+	 * snap ("This call is not available inside the sandbox").
+	 */
+	g_socket_client_set_enable_proxy(client, FALSE);
 	g_socket_client_connect_to_host_async(client, game_host, (guint16) port,
 		ConnCancel, connectDone, NULL);
 	/* The pending operation holds its own reference */

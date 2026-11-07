@@ -2,6 +2,9 @@ Changes by date
 ===============
 
 =20261106=
+* Fixed connecting from the snap ("This call is not available inside the
+  sandbox"): ImpFE no longer looks up desktop proxy settings, which don't
+  apply to Imperium's plain TCP connection
 * Fixed the blank map and missing About/window icon in the snap: ImpFE now
   decodes its built-in XPM images itself instead of relying on GTK's XPM
   plug-in, which newer systems and the GNOME snap runtime leave out
