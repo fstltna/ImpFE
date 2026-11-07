@@ -1,0 +1,68 @@
+%Start
+
+@C1@l@c@bImpFE
+
+ Copyright (c) 1997-2026
+      Marisa Giancarla (marisag@haikumail.online)
+      Official game server and support: https://empiredirectory.net
+
+ See the Copyright file included in the distribution
+
+%Overview
+
+@C4@c@b@lOverview
+
+ImpFE is a graphical front-end for the multi-user science fiction strategy game Imperium. It is distributed under the
+GNU Public License, and should compile fine on any modern Linux system. It uses the GTK 3 toolkit, so you will
+need the GTK 3 development files (libgtk-3-dev on Debian and Ubuntu) to be able to compile it yourself.
+
+%Main
+
+@C4@c@b@lThe Main Window
+
+The main window for ImpFE contains the input & prompt lines, as well as a scrolling text area where raw output from
+the server will appear. Along the top of the window are the primary menus, File, Server, View, Configure, and Help.
+
+File		Server			View		Configure	Help
+    Open DB	    Open Connection	    Map		    Host		    Index
+    Close DB	    Close Connection	    Planet	    Settings	    About
+    Save DB				    Ship
+    New DB				    Scripts
+    Quit					    Clear Display
+
+The menus have the following functions:
+
+	File->Open DB
+		Opens an already existing database file. You can have different databases for each game you play.
+	File->Close DB
+		Saves and then closes the currently open DB. Note this will NOT close your connection to the server if
+		one is open.
+	File->Save DB
+		Saves the current DB to disk, and flushes the various object caches to disk. Leaves the server
+		connection open, if any.
+	File->New DB
+		Creates a new DB, or erases one if an existing one is selected, and then opens it.
+	File->Quit
+		Closes your connection (if any), closes your open DB (if any), and exits ImpFE.
+
+	Server->Open Connection
+		Tries to open a connection to the server specified for the active DB.
+	Server->Close Connection
+		Closes any open server connection.
+
+	View->Map
+		Opens the Map window.
+	View->Planet
+		Opens the planet browse window.
+	View->Ship
+		Opens the ship browse window.
+	View->Scripts
+		Opens the scripts management window so you can start / stop S-Lang scripts.
+	View->Clear Display
+		Allows you to clear the contents of the server output window.
+
+%Config
+
+@C4@c@b@lConfiguration Window
+
+

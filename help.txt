@@ -43,9 +43,11 @@ The menus have the following functions:
 		Closes your connection (if any), closes your open DB (if any), and exits ImpFE.
 
 	Server->Open Connection
-		Tries to open a connection to the server specified for the active DB.
+		Tries to open a connection to the server specified for the active DB. The status box shows
+		"Connecting..." while it tries; if the server doesn't answer within 20 seconds ImpFE gives up and
+		says why in the main window.
 	Server->Close Connection
-		Closes any open server connection.
+		Closes any open server connection, or stops a connection attempt that is still in progress.
 
 	View->Map
 		Opens the Map window.

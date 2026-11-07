@@ -2,6 +2,13 @@ Changes by date
 ===============
 
 =20261106=
+* Fixed owners showing as ??? : ImpFE now finds its player number even if
+  the player name's capitalisation differs from the server's (the server
+  ignores case) or the name was typed at the login prompt, and refreshes
+  ship data saved without an owner
+* Connecting to the server no longer freezes ImpFE: it connects in the
+  background, gives up after 20 seconds, can be cancelled with Close
+  Connection, reports why a connection failed, and supports IPv6
 * Version 0.3.0
 * Fixed ImpFE appearing to hang when creating a new player: questions the
   server asks without a newline are now shown, password answers are hidden,

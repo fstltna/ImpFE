@@ -212,8 +212,8 @@ void handlePlayerList(const char *line)
 	else
 	{
 	    strcpy(Player[playNum].name, playName);
-	    /* See if this is us... */
-	    if (strcmp(playName, game_player) == 0)
+	    /* See if this is us - the server ignores case in names, so we must too */
+	    if ((game_player[0] != '\0') && (strcasecmp(playName, game_player) == 0))
 	    {
 			/* Yep!! */
 			if (player_num != playNum)
@@ -226,9 +226,12 @@ void handlePlayerList(const char *line)
 				{
 					fe_puts(">>> Hmm, your player number seems to have changed!\n");
 				}
+				player_num = playNum;
+				/* Ships we already know about may have been saved without
+				   an owner (shown as ???) - refresh them */
+				(void) addCmd("ship status\n", QUE_HIGH);
+				(void) addCmd("ship big\n", QUE_HIGH);
 			}
-			player_num = playNum;
-		
 	    }
 	    for (tmp=0; tmp < RACE_MAX; tmp++)
 	    {

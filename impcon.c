@@ -28,6 +28,10 @@ static char rcsid[]="$Id: impcon.c,v 1.2 2000/05/24 21:51:39 marisa Exp $";
 #include "gui.h"
 
 static guint ServWatch=0;	/* GLib watch on the game socket */
+
+/* Connection states, shown in the Server menu and status box */
+typedef enum { CONN_OFFLINE, CONN_CONNECTING, CONN_CONNECTED } ConnState_t;
+static void setConnState(ConnState_t state);
 #define SERV_BUF_LEN	2048
 static char ServBuf[SERV_BUF_LEN+1];
 static BOOL DoingLogin=FALSE;
@@ -75,39 +79,6 @@ char game_player_pswd[]="unknown";
 char game_desc[]="unknown";
 int game_time=0;
 int game_btus=0; */
-
-/*
- * call_cocket - Attempts to connect to a remote socket
- *               returns the socket number if succeeds, or -1 if fails
- */
-int call_socket(char *hostname, int portnum)
-{
-	struct sockaddr_in sa;
-	struct hostent *hp;
-	int a, s;
-
-	if ((hp=gethostbyname(hostname)) == NULL)
-	{
-		errno=ECONNREFUSED;
-		return(-1);
-	}
-
-	bzero(&sa, sizeof(sa));
-	bcopy(hp->h_addr, (char *)&sa.sin_addr, hp->h_length * sizeof(char));
-	sa.sin_family=hp->h_addrtype;
-	sa.sin_port=htons((unsigned short) portnum);
-
-	if ((s=socket(hp->h_addrtype, SOCK_STREAM, 0)) < 0) /* Get socket */
-	{
-		return(-1);
-	}
-	if (connect(s, (struct sockaddr *) &sa, sizeof(sa)) < 0)
-	{
-		close(s);
-		return(-1);
-	}
-	return(s);
-}
 
 /*
  * write_data - writes data to the socket...
@@ -283,11 +254,7 @@ static gboolean handleServInp(GIOChannel *chan, GIOCondition cond, gpointer data
 		close(GameSocket);
 		GameSocket=-1;
 		ServBuf[0]='\0';
-		ui_menu_enable(fd_ImpFeMain->MainServerMenu,
-							  MAIN_SERVER_MENU_CLOSE, FALSE);
-		ui_menu_enable(fd_ImpFeMain->MainServerMenu,
-							  MAIN_SERVER_MENU_OPEN, TRUE);
-		ui_set_text(fd_ImpFeMain->StatusBox, "Offline");
+		setConnState(CONN_OFFLINE);
 		fe_puts("*** Connection to server terminated...\n");
 		AtMainPrompt=FALSE;
 		return(FALSE);
@@ -295,14 +262,150 @@ static gboolean handleServInp(GIOChannel *chan, GIOCondition cond, gpointer data
 	return(TRUE);
 }
 
+/* Give up on a connection attempt (name lookup + connect) after this */
+#define CONNECT_TIMEOUT_SECS 20
+
+static GCancellable *ConnCancel=NULL;	/* set while a connect is in progress */
+static guint ConnTimer=0;		/* timeout for that attempt */
+static BOOL ConnTimedOut=FALSE;
+
 /*
- * cmd_connect
+ * setConnState - updates the Server menu and the status box
+ */
+static void setConnState(ConnState_t state)
+{
+	ui_menu_enable(fd_ImpFeMain->MainServerMenu, MAIN_SERVER_MENU_OPEN,
+		state == CONN_OFFLINE);
+	/* Close also cancels a connection attempt */
+	ui_menu_enable(fd_ImpFeMain->MainServerMenu, MAIN_SERVER_MENU_CLOSE,
+		state != CONN_OFFLINE);
+	switch (state)
+	{
+		case CONN_CONNECTING:
+			ui_set_text(fd_ImpFeMain->StatusBox, "Connecting...");
+			break;
+		case CONN_CONNECTED:
+			ui_set_text(fd_ImpFeMain->StatusBox, "CONNECTED");
+			break;
+		default:
+			ui_set_text(fd_ImpFeMain->StatusBox, "Offline");
+			break;
+	}
+}
+
+static gboolean connectTimeout(gpointer unused)
+{
+	ConnTimer=0;
+	ConnTimedOut=TRUE;
+	if (ConnCancel != NULL)
+	{
+		g_cancellable_cancel(ConnCancel);
+	}
+	return(G_SOURCE_REMOVE);
+}
+
+/*
+ * connectDone - called when a connection attempt finishes, one way or
+ *               the other
+ */
+static void connectDone(GObject *client, GAsyncResult *res, gpointer unused)
+{
+	GSocketConnection *conn;
+	GError *err=NULL;
+	int fd, flags;
+
+	conn=g_socket_client_connect_to_host_finish(G_SOCKET_CLIENT(client), res,
+		&err);
+	if (ConnTimer != 0)
+	{
+		g_source_remove(ConnTimer);
+		ConnTimer=0;
+	}
+	g_clear_object(&ConnCancel);
+
+	if (conn == NULL)
+	{
+		if (ConnTimedOut)
+		{
+			char msg[64];
+
+			g_snprintf(msg, sizeof(msg),
+				"**** Connection failed: no answer after %d seconds\n",
+				CONNECT_TIMEOUT_SECS);
+			fe_puts(msg);
+		}
+		else if (g_error_matches(err, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+		{
+			fe_puts("*** Connection attempt cancelled\n");
+		}
+		else
+		{
+			fe_puts("**** Connection failed: ");
+			fe_puts(err->message);
+			fe_puts("\n");
+		}
+		g_clear_error(&err);
+		AtMainPrompt=FALSE;
+		setConnState(CONN_OFFLINE);
+		return;
+	}
+
+	/*
+	 * The rest of ImpFE uses a plain blocking file descriptor, so take
+	 * our own copy of it and let GLib's socket objects go.
+	 */
+	fd=dup(g_socket_get_fd(g_socket_connection_get_socket(conn)));
+	g_object_unref(conn);
+	if (fd == -1)
+	{
+		fe_puts("**** Connection failed: ");
+		fe_puts(strerror(errno));
+		fe_puts("\n");
+		setConnState(CONN_OFFLINE);
+		return;
+	}
+	flags=fcntl(fd, F_GETFL);
+	if (flags != -1)
+	{
+		(void) fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
+	}
+	GameSocket=fd;
+
+	/* Add in the callback for the socket */
+	{
+		GIOChannel *chan = g_io_channel_unix_new(GameSocket);
+
+		ServWatch = g_io_add_watch(chan, G_IO_IN | G_IO_HUP | G_IO_ERR,
+			handleServInp, NULL);
+		g_io_channel_unref(chan);
+	}
+	ServBuf[0]='\0';
+	LoseNextChar=FALSE;
+	DoingLogin=TRUE;
+	setConnState(CONN_CONNECTED);
+}
+
+/*
+ * cmd_connect - starts connecting to the server (kill_it FALSE), or
+ *               closes the connection or cancels the attempt (kill_it
+ *               TRUE). Connecting happens in the background; the
+ *               result is reported in the main window.
  */
 BOOL cmd_connect(BOOL kill_it)
 {
+	GSocketClient *client;
+	long port;
+	char *end;
+
 	/* Are we trying to stop the server? */
 	if (kill_it)
 	{
+		/* Still trying to connect? */
+		if (ConnCancel != NULL)
+		{
+			g_cancellable_cancel(ConnCancel);
+			return(TRUE);
+		}
 		/* Make sure the socket was valid */
 		if (GameSocket != -1)
 		{
@@ -317,29 +420,43 @@ BOOL cmd_connect(BOOL kill_it)
 			fe_puts("*** Connection to server closed\n");
 		        AtMainPrompt=FALSE;
 		}
+		setConnState(CONN_OFFLINE);
 		return(TRUE);
 	}
+
+	/* Already connected, or on the way? */
+	if ((GameSocket != -1) || (ConnCancel != NULL))
+	{
+		return(FALSE);
+	}
+	if (game_host[0] == '\0')
+	{
+		fe_puts("**** No server set - use Configure / Host first\n");
+		return(FALSE);
+	}
+	port=strtol(game_port, &end, 10);
+	if ((end == game_port) || (*end != '\0') || (port < 1) || (port > 65535))
+	{
+		fe_puts("**** The server port '");
+		fe_puts(game_port);
+		fe_puts("' is not valid - use Configure / Host to fix it\n");
+		return(FALSE);
+	}
+
 	ui_browser_append(fd_ImpFeMain->MainBrowser, "*** Attempting to connect to ");
 	ui_browser_append(fd_ImpFeMain->MainBrowser, game_host);
 	ui_browser_append(fd_ImpFeMain->MainBrowser, ", port ");
 	ui_browser_append(fd_ImpFeMain->MainBrowser, game_port);
 	ui_browser_append(fd_ImpFeMain->MainBrowser, "\n");
-	if ((GameSocket=call_socket(game_host, atoi(game_port))) == -1)
-	{
-		fe_puts("**** Connection failed\n");
-		AtMainPrompt=FALSE;
-		return(FALSE);
-	}
-	/* Add in the callback for the socket */
-	{
-		GIOChannel *chan = g_io_channel_unix_new(GameSocket);
 
-		ServWatch = g_io_add_watch(chan, G_IO_IN | G_IO_HUP | G_IO_ERR,
-			handleServInp, NULL);
-		g_io_channel_unref(chan);
-	}
-	ServBuf[0]='\0';
-	LoseNextChar=FALSE;
-	DoingLogin=TRUE;
+	ConnCancel=g_cancellable_new();
+	ConnTimedOut=FALSE;
+	ConnTimer=g_timeout_add_seconds(CONNECT_TIMEOUT_SECS, connectTimeout, NULL);
+	client=g_socket_client_new();
+	g_socket_client_connect_to_host_async(client, game_host, (guint16) port,
+		ConnCancel, connectDone, NULL);
+	/* The pending operation holds its own reference */
+	g_object_unref(client);
+	setConnState(CONN_CONNECTING);
 	return(TRUE);
 }

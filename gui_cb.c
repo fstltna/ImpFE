@@ -123,6 +123,11 @@ void MainInputBox_cb(GtkWidget *w, /*@unused@*/gpointer data)
 		}
 		g_snprintf(OutBuf, sizeof(OutBuf), "%s%s",
 			(name[0] == '!') ? "" : "!", name);
+		/* Remember who we are, so ImpFE can find our player number */
+		g_strlcpy(game_player, (name[0] == '!') ? &name[1] : name,
+			sizeof(game_player));
+		g_strchomp(game_player);
+		DirtyData=TRUE;
 	}
 	else
 	{
@@ -196,25 +201,17 @@ void MainFileMenu_cb(/*@unused@*/GtkWidget *menu, int item)
 	}
 }
 
-void MainServerMenu_cb(GtkWidget *menu, int item)
+void MainServerMenu_cb(/*@unused@*/GtkWidget *menu, int item)
 {
 	switch(item)
 	{
 	    case MAIN_SERVER_MENU_OPEN:
-			if (cmd_connect(FALSE))
-			{
-				ui_menu_enable(menu, MAIN_SERVER_MENU_OPEN, FALSE);
-				ui_menu_enable(menu, MAIN_SERVER_MENU_CLOSE, TRUE);
-				ui_set_text(fd_ImpFeMain->StatusBox, "CONNECTED");
-			}
+			/* Connects in the background; updates the menu and status */
+			(void) cmd_connect(FALSE);
 			break;
 	    case MAIN_SERVER_MENU_CLOSE:
-			if (cmd_connect(TRUE))
-			{
-				ui_menu_enable(menu, MAIN_SERVER_MENU_CLOSE, FALSE);
-				ui_menu_enable(menu, MAIN_SERVER_MENU_OPEN, TRUE);
-				ui_set_text(fd_ImpFeMain->StatusBox, "Offline");
-			}
+			/* Closes the connection, or cancels connecting */
+			(void) cmd_connect(TRUE);
 			break;
 	    default:
 			break;
