@@ -346,6 +346,9 @@ typedef struct {
 typedef struct {
 	char	name[NAME_LEN];	/* Races name               */
 	UBYTE	relation;	/* Players relation to race */
+	UBYTE	homeKnown;	/* TRUE once "home" is set  */
+				/* (fits in what was padding, so the
+				   races database layout is unchanged) */
 	ULONG	home;		/* Home planet #            */
 	} Race_t;
 /*
@@ -400,6 +403,13 @@ typedef enum
 } InputMode_t;
 extern void setInputMode(InputMode_t mode);
 extern void showServerQuestion(const char *question);
+
+/* planet.c - who owns a planet, for display */
+extern const char *planetOwnerName(const FePlanet_t *pl, ULONG plNum,
+	BOOL brief);
+extern int planetHomeRace(ULONG plNum);
+/* parse.c - the race we belong to (-1 if not known yet) */
+extern int ourRace(void);
 
 /* main.c */
 extern void setDefaults(void);

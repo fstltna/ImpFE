@@ -2,6 +2,11 @@ Changes by date
 ===============
 
 =20261106=
+* Home planets show the race that owns them (e.g. "Krellian (race)")
+  instead of ???, learned from the status report and from planet scans;
+  older databases pick this up on the next connect. Planets owned by other
+  players now show the owner's name (the relation was shown instead), and
+  race names in the player list are matched even though they are cut short
 * Fixed owners showing as ??? : ImpFE now finds its player number even if
   the player name's capitalisation differs from the server's (the server
   ignores case) or the name was typed at the login prompt, and refreshes

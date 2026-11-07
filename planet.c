@@ -39,6 +39,55 @@ static char rcsid[]="$Id: planet.c,v 1.2 2000/05/24 20:40:39 marisa Exp $";
 #include "gui.h"
 
 /*
+ * planetHomeRace - returns the race whose home planet this is, or -1
+ */
+int planetHomeRace(ULONG plNum)
+{
+	int race;
+
+	for (race = 0; race < RACE_MAX; race++)
+	{
+		if (Race[race].homeKnown && (Race[race].home == plNum))
+		{
+			return(race);
+		}
+	}
+	return(-1);
+}
+
+/*
+ * planetOwnerName - who owns a planet, for display. Home planets belong
+ *                   to a race rather than a player. brief is for the
+ *                   narrow census column.
+ */
+const char *planetOwnerName(const FePlanet_t *pl, ULONG plNum, BOOL brief)
+{
+	static char buf[NAME_LEN + 16];
+	int race;
+
+	race = planetHomeRace(plNum);
+	if (race >= 0)
+	{
+		if (Race[race].name[0] != '\0')
+		{
+			g_snprintf(buf, sizeof(buf), brief ? "R:%s" : "%s (race)",
+				Race[race].name);
+		}
+		else
+		{
+			g_snprintf(buf, sizeof(buf), "Race %d", race);
+		}
+		return(buf);
+	}
+	if ((pl->owner != 0) && (pl->owner < PLAYER_MAX) &&
+		(Player[pl->owner].name[0] != '\0'))
+	{
+		return(Player[pl->owner].name);
+	}
+	return("???");
+}
+
+/*
  * buildPlCensus - Clears the existing contents of the planet census
  *                 window and redraws it based on current known
  *                 planets.
@@ -65,15 +114,8 @@ fprintf(stderr, "*** readPlanet ok %lu!\n", plNum);
 			if (tmpPlanet.last_seen != 0)
 			{
 fprintf(stderr, "*** tempPlanet ok %lu!\n", plNum);
-			if (tmpPlanet.owner != 0)
-			{
-				strncpy(nameBuf, Player[tmpPlanet.owner].name, 9);
-				nameBuf[9] = '\0';
-			}
-			else
-			{
-				strcpy(nameBuf, "???");
-			}
+			strncpy(nameBuf, planetOwnerName(&tmpPlanet, plNum, TRUE), 8);
+			nameBuf[8] = '\0';
 			strncpy(plName, tmpPlanet.name, 9);
 			plName[9]='\0';
 			if (tmpPlanet.class != 0)
@@ -113,6 +155,37 @@ fprintf(stderr, "*** tempPlanet ok %lu!\n", plNum);
 }
 
 /*
+ * raceRelation - describes our relation to a race (prefix is "Def/"
+ *                when it applies because the player relation is default)
+ */
+static void raceRelation(char *buf, int race, const char *prefix)
+{
+	const char *rel;
+
+	if ((race < 0) || (race >= RACE_MAX))
+	{
+		strcpy(buf, "???");
+		return;
+	}
+	switch (Race[race].relation)
+	{
+		case relation_allied:
+			rel = "Allied";
+			break;
+		case relation_war:
+			rel = "*WAR*";
+			break;
+		case relation_default:
+			rel = "Neutral";
+			break;
+		default:
+			rel = "???";
+			break;
+	}
+	sprintf(buf, "%s%s", prefix, rel);
+}
+
+/*
  * buildPlDetDisp - Clears the existing contents of the planet detail
  *                 window and redraws it based on current known
  *                 planets.
@@ -123,6 +196,7 @@ void buildPlDetDisp(void)
 	FePlanet_t tmpPlanet;
 	FeItem_t tmpItem;
 	char workBuf[160], nameBuf[10], itType, location[15], tBuff[28];
+	int homeRace;
 
 	/* Clear the existing contents, if any */
 	ui_browser_clear(fd_PlanetDetailForm->PlProdBrowse);
@@ -147,7 +221,7 @@ void buildPlDetDisp(void)
 		if ((tmpItem.last_seen != 0) && (tmpItem.where == LastPlanet) &&
 			(tmpItem.flags & BF_ONPLAN))
 		{
-			if (tmpItem.owner != 0)
+			if ((tmpItem.owner != 0) && (tmpItem.owner < PLAYER_MAX))
 			{
 				strncpy(nameBuf, Player[tmpItem.owner].name, 9);
 				nameBuf[9] = '\0';
@@ -206,7 +280,7 @@ void buildPlDetDisp(void)
 			ui_set_text(fd_PlanetDetailForm->Transfer, "IMPOSSIBLE");
 			break;
 	}
-	if (tmpPlanet.lstOwn != 0)
+	if ((tmpPlanet.lstOwn != 0) && (tmpPlanet.lstOwn < PLAYER_MAX))
 	{
 		strcpy(workBuf, Player[tmpPlanet.lstOwn].name);
 	}
@@ -271,60 +345,50 @@ void buildPlDetDisp(void)
 	{
 		ui_set_text(fd_PlanetDetailForm->Class, "?");
 	}
-	if (tmpPlanet.owner != 0)
+	/* Owner - a player, or a race for home planets */
+	ui_set_text(fd_PlanetDetailForm->Owner,
+		planetOwnerName(&tmpPlanet, LastPlanet, FALSE));
+	/* Our relation to the owner */
+	homeRace = planetHomeRace(LastPlanet);
+	if (homeRace >= 0)
 	{
-		strcpy(workBuf, Player[tmpPlanet.owner].name);
+		if (homeRace == ourRace())
+		{
+			strcpy(workBuf, "Our race");
+		}
+		else
+		{
+			raceRelation(workBuf, homeRace, "");
+		}
+	}
+	else if (tmpPlanet.owner == player_num)
+	{
+		strcpy(workBuf, "N/A");
+	}
+	else if ((tmpPlanet.owner != 0) && (tmpPlanet.owner < PLAYER_MAX))
+	{
+		switch (Player[tmpPlanet.owner].relation)
+		{
+			case relation_default:
+				/* Check the race relation */
+				raceRelation(workBuf, Player[tmpPlanet.owner].race, "Def/");
+				break;
+			case relation_allied:
+				strcpy(workBuf, "Allied");
+				break;
+			case relation_war:
+				strcpy(workBuf, "*WAR*");
+				break;
+			default:
+				strcpy(workBuf, "???");
+				break;
+		}
 	}
 	else
 	{
 		strcpy(workBuf, "???");
 	}
-	if (tmpPlanet.owner == player_num)
-	{
-		ui_set_text(fd_PlanetDetailForm->OwnerRel, "N/A");
-	}
-	else
-	{
-		if (tmpPlanet.owner != 0)
-		{
-			switch (Player[tmpPlanet.owner].relation)
-			{
-				case relation_default:
-					/* Check the race relation */
-					switch (Race[Player[tmpPlanet.owner].race].relation)
-					{
-						case relation_allied:
-							strcpy(workBuf, "Def/Allied");
-							break;
-						case relation_war:
-							strcpy(workBuf, "Def/*WAR*");
-							break;
-						case relation_default:
-							strcpy(workBuf, "Def/Neutral");
-							break;
-						default:
-							strcpy(workBuf, "Def/???");
-							break;
-					}
-					break;
-				case relation_allied:
-					strcpy(workBuf, "Allied");
-					break;
-				case relation_war:
-					strcpy(workBuf, "*WAR*");
-					break;
-				default:
-					strcpy(workBuf, "???");
-					break;
-			}
-		}
-		else
-		{
-			strcpy(workBuf, "???");
-		}
-		ui_set_text(fd_PlanetDetailForm->OwnerRel, workBuf);
-	}
-	ui_set_text(fd_PlanetDetailForm->Owner, workBuf);
+	ui_set_text(fd_PlanetDetailForm->OwnerRel, workBuf);
 	ui_entry_set(fd_PlanetDetailForm->Name, tmpPlanet.name);
 	ui_entry_set(fd_PlanetDetailForm->Checkpoint, tmpPlanet.chkpoint);
 

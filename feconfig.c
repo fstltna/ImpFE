@@ -438,6 +438,14 @@ void handleOpenCfg(void)
 			{
 				addCmd("status\n", QUE_IMMEDIATE);
 			}
+			else if ((player_num != 0) && (planetHomeRace(home_planet) < 0))
+			{
+				/* Older databases don't know which race owns our home
+				   planet - the player list and status tell us */
+				addCmd("race\n", QUE_IMMEDIATE);
+				addCmd("player\n", QUE_IMMEDIATE);
+				addCmd("status\n", QUE_IMMEDIATE);
+			}
 			else
 			{
 				(void) readPlanet(&tmpPlanet, home_planet);

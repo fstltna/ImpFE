@@ -66,7 +66,7 @@ fprintf(stderr, "*** readShip ok %lu!\n", shNum);
 			if(tmpShip.last_seen != 0)
 			{
 fprintf(stderr, "*** tempship ok %lu!\n", shNum);
-				if (tmpShip.owner != 0)
+				if ((tmpShip.owner != 0) && (tmpShip.owner < PLAYER_MAX))
 				{
 fprintf(stderr, "*** owner %u!\n", tmpShip.owner);
 					strncpy(nameBuf, Player[tmpShip.owner].name, 9);
@@ -156,7 +156,7 @@ void buildShDetDisp(void)
 		if ((tmpItem.last_seen != 0) && (tmpItem.where == LastShip) &&
 			!(tmpItem.flags & BF_ONPLAN))
 		{
-			if (tmpItem.owner != 0)
+			if ((tmpItem.owner != 0) && (tmpItem.owner < PLAYER_MAX))
 			{
 				strncpy(nameBuf, Player[tmpItem.owner].name, 9);
 				nameBuf[9] = '\0';
@@ -279,7 +279,7 @@ void buildShDetDisp(void)
 	ui_set_text(fd_ShipDetailForm->ShNum, workBuf);
 	sprintf(workBuf, "%u,%u", tmpShip.sh_row, tmpShip.sh_col);
 	ui_set_text(fd_ShipDetailForm->RowCol, workBuf);
-	if (tmpShip.owner != 0)
+	if ((tmpShip.owner != 0) && (tmpShip.owner < PLAYER_MAX))
 	{
 		strcpy(workBuf, Player[tmpShip.owner].name);
 	}

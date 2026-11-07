@@ -192,6 +192,37 @@ void handleRace2(const char *line)
 	ui_browser_append(fd_ImpFeMain->MainBrowser, line);
 }
 
+/* The race we belong to, once the player list has told us */
+static int OurRace = -1;
+
+int ourRace(void)
+{
+	if ((OurRace < 0) && (home_planet != 0))
+	{
+		/* Known from an earlier session: the race whose home we share */
+		return(planetHomeRace(home_planet));
+	}
+	return(OurRace);
+}
+
+/*
+ * setRaceHome - records which planet is a race's home planet. Home
+ *               planets belong to a race rather than to a player.
+ */
+static void setRaceHome(int race, ULONG plNum)
+{
+	if ((race < 0) || (race >= RACE_MAX))
+	{
+		return;
+	}
+	if (!Race[race].homeKnown || (Race[race].home != plNum))
+	{
+		Race[race].home = plNum;
+		Race[race].homeKnown = TRUE;
+		DirtyData = TRUE;
+	}
+}
+
 void handlePlayerList(const char *line)
 {
 	unsigned int playNum, playTime, playBtu;
@@ -233,15 +264,22 @@ void handlePlayerList(const char *line)
 				(void) addCmd("ship big\n", QUE_HIGH);
 			}
 	    }
+	    /* The player list only shows the first few letters of the race */
 	    for (tmp=0; tmp < RACE_MAX; tmp++)
 	    {
-			if (Race[tmp].name[0] != '\0')
+			if ((Race[tmp].name[0] != '\0') &&
+				(strncasecmp(Race[tmp].name, playRace, strlen(playRace)) == 0))
 			{
-				if (strcmp(Race[tmp].name, playRace) == 0)
+				Player[playNum].race = tmp;
+				if (playNum == player_num)
 				{
-					Player[playNum].race = tmp;
-					tmp=RACE_MAX;
+					OurRace = tmp;
+					if (home_planet != 0)
+					{
+						setRaceHome(tmp, home_planet);
+					}
 				}
+				break;
 			}
 	    }
 	    if (strcmp(playStatus, "DEITY") == 0)
@@ -1467,7 +1505,14 @@ void handlePlScan(const char *line)
 			break;
 	}
 	pos += 1 * sizeof(char);
-	/* Skip over race */
+	/* The race that owns it, if it's a home planet */
+	if (tmpPlan.class == 'H')
+	{
+		memcpy(workBuf, pos, 1 * sizeof(char));
+		workBuf[1]='\0';
+		(void) sscanf(workBuf, "%lx", &tmp);
+		setRaceHome((int) tmp, plNum);
+	}
 	pos += 1 * sizeof(char);
 	memcpy(workBuf, pos, 2 * sizeof(char));
 	workBuf[2]='\0';
@@ -1482,7 +1527,8 @@ void handlePlScan(const char *line)
 			return;
 		}
 	}
-	tmpPlan.owner = tmp;
+	/* The server sends 0xff for "nobody"; we use 0 for that */
+	tmpPlan.owner = (tmp < PLAYER_MAX) ? (UBYTE) tmp : 0;
 	pos += 2 * sizeof(char);
 	/* Skip over planet name */
 	pos += 12 * sizeof(char);
@@ -1649,7 +1695,8 @@ void handleShScan(const char *line)
 			return;
 		}
 	}
-	tmpShip.owner = tmp;
+	/* The server sends 0xff for "nobody"; we use 0 for that */
+	tmpShip.owner = (tmp < PLAYER_MAX) ? (UBYTE) tmp : 0;
 	pos += 2 * sizeof(char);
 	/* Skip over ship name */
 	pos += 12 * sizeof(char);
@@ -1790,7 +1837,8 @@ void handleShipScDet(const char *line)
 		tmpShip.sh_row = (USHORT) row;
 		tmpShip.sh_col = (USHORT) col;
 	}
-	tmpShip.owner = owner;
+	/* The server sends 0xff for "nobody"; we use 0 for that */
+	tmpShip.owner = (owner < PLAYER_MAX) ? (UBYTE) owner : 0;
 	tmpShip.ShipType = class;
 	tmpShip.last_seen=tp.tv_sec;
 
@@ -1988,6 +2036,8 @@ void fe_parse(const char *buf)
 							}
 							else
 							{
+								/* Our race's home planet belongs to the race */
+								setRaceHome(OurRace, (ULONG) atol(&buf[16]));
 								if (atoi(&buf[16]) != home_planet)
 								{
 									home_planet=atoi(&buf[16]);
