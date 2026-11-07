@@ -27,6 +27,7 @@ static const char ui_css[] =
 	"label.heading { font-weight: bold; }\n"
 	"label.title { font-weight: bold; font-size: larger; }\n"
 	".map-grid { background-color: #000000; }\n"
+	"treeview.browser-heading { background-color: transparent; }\n"
 	".map-coord { font-family: monospace; }\n";
 
 /*
@@ -305,6 +306,10 @@ enum
 	BR_NCOLS
 };
 
+static void br_insert(GtkListStore *store, const char *text, int weight,
+	PangoStyle style, double scale, float xalign, const char *fg,
+	const char *family, PangoUnderline underline);
+
 static GtkListStore *br_store(GtkWidget *browser)
 {
 	return(GTK_LIST_STORE(gtk_tree_view_get_model(GTK_TREE_VIEW(browser))));
@@ -342,10 +347,14 @@ static gboolean br_button_press(GtkWidget *view, GdkEventButton *ev,
  * ui_browser_new - creates a list of text lines. The returned widget is
  *                  the list itself; pack ui_browser_widget() of it.
  */
-GtkWidget *ui_browser_new(gboolean monospace, UiBrowserCb cb)
+/*
+ * br_view_new - the list widget behind a browser (and its heading line,
+ *               which must be drawn identically so the columns line up)
+ */
+static GtkWidget *br_view_new(gboolean monospace)
 {
 	GtkListStore *store;
-	GtkWidget *view, *scroll;
+	GtkWidget *view;
 	GtkCellRenderer *cell;
 	GtkTreeViewColumn *col;
 
@@ -369,6 +378,14 @@ GtkWidget *ui_browser_new(gboolean monospace, UiBrowserCb cb)
 		gtk_style_context_add_class(gtk_widget_get_style_context(view),
 			"mono");
 	}
+	return(view);
+}
+
+GtkWidget *ui_browser_new(gboolean monospace, UiBrowserCb cb)
+{
+	GtkWidget *view, *scroll;
+
+	view = br_view_new(monospace);
 	if (cb != NULL)
 	{
 		g_object_set_data(G_OBJECT(view), "ui-br-cb", (gpointer) cb);
@@ -384,6 +401,53 @@ GtkWidget *ui_browser_new(gboolean monospace, UiBrowserCb cb)
 	gtk_widget_set_vexpand(scroll, TRUE);
 	gtk_container_add(GTK_CONTAINER(scroll), view);
 	return(view);
+}
+
+/* Keeps a browser's heading scrolled sideways along with its list */
+static void br_heading_follow(GtkAdjustment *list, gpointer heading)
+{
+	gtk_adjustment_set_value(GTK_ADJUSTMENT(heading),
+		gtk_adjustment_get_value(list));
+}
+
+/*
+ * ui_browser_heading - a column-heading line for a browser. It is drawn
+ *                      with the same kind of list, font and padding as
+ *                      the browser's lines, so the columns line up under
+ *                      any theme. Pack the returned widget above the
+ *                      browser.
+ */
+GtkWidget *ui_browser_heading(GtkWidget *browser, const char *text)
+{
+	GtkWidget *view, *scroll;
+	GtkAdjustment *listAdj;
+
+	view = br_view_new(gtk_style_context_has_class(
+		gtk_widget_get_style_context(browser), "mono"));
+	gtk_style_context_add_class(gtk_widget_get_style_context(view),
+		"browser-heading");
+	br_insert(br_store(view), text, PANGO_WEIGHT_BOLD, PANGO_STYLE_NORMAL,
+		1.0, 0.0f, NULL, NULL, PANGO_UNDERLINE_NONE);
+	gtk_tree_selection_set_mode(
+		gtk_tree_view_get_selection(GTK_TREE_VIEW(view)), GTK_SELECTION_NONE);
+	gtk_widget_set_can_focus(view, FALSE);
+
+	/* Same frame as the list, with no scrollbars of its own */
+	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+		GTK_POLICY_EXTERNAL, GTK_POLICY_NEVER);
+	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(scroll),
+		GTK_SHADOW_NONE);
+	gtk_widget_set_hexpand(scroll, TRUE);
+	gtk_container_add(GTK_CONTAINER(scroll), view);
+
+	/* Scroll sideways with the list */
+	listAdj = gtk_scrolled_window_get_hadjustment(
+		GTK_SCROLLED_WINDOW(ui_browser_widget(browser)));
+	g_signal_connect(listAdj, "value-changed",
+		G_CALLBACK(br_heading_follow),
+		gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(scroll)));
+	return(scroll);
 }
 
 /* Plain output browsers don't need a selection highlight */

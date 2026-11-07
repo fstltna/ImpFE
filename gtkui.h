@@ -76,6 +76,7 @@ extern void ui_menu_enable(GtkWidget *menu, int item, gboolean enabled);
 /* Browsers - scrolling lists of text lines */
 extern GtkWidget *ui_browser_new(gboolean monospace, UiBrowserCb cb);
 extern GtkWidget *ui_browser_widget(GtkWidget *browser);
+extern GtkWidget *ui_browser_heading(GtkWidget *browser, const char *text);
 extern void ui_browser_set_selectable(GtkWidget *browser, gboolean selectable);
 extern void ui_browser_set_wrap(GtkWidget *browser);
 extern void ui_browser_append(GtkWidget *browser, const char *chars);

@@ -62,19 +62,6 @@ static GtkWidget *heading_new(const char *text)
 	return(label);
 }
 
-/* A monospaced column-heading line to sit above a browser */
-static GtkWidget *column_heads(const char *text)
-{
-	GtkWidget *label;
-
-	label = ui_label_new(text);
-	gtk_style_context_add_class(gtk_widget_get_style_context(label), "mono");
-	gtk_style_context_add_class(gtk_widget_get_style_context(label),
-		"heading");
-	gtk_widget_set_margin_start(label, 4);
-	return(label);
-}
-
 /* Packs a browser beneath its column headings */
 static GtkWidget *browser_with_heads(GtkWidget *browser, const char *heads)
 {
@@ -83,7 +70,8 @@ static GtkWidget *browser_with_heads(GtkWidget *browser, const char *heads)
 	box = vbox_new(2);
 	if (heads != NULL)
 	{
-		gtk_box_pack_start(GTK_BOX(box), column_heads(heads), FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(box), ui_browser_heading(browser, heads),
+			FALSE, FALSE, 0);
 	}
 	gtk_box_pack_start(GTK_BOX(box), ui_browser_widget(browser), TRUE, TRUE, 0);
 	return(box);
