@@ -76,6 +76,8 @@
  */
 #define	BF_DIRTY	00000001 /* Should be rescanned */
 #define	BF_OWNED	00000002 /* Player owns it      */
+#define	BF_NO_OWNER	00000004 /* (planets) Server says nobody owns it */
+#define	BF_XFER_KNOWN	00000010 /* (planets) "xfer" is real, not a default */
 #define	BF_FOR_SALE	00000004 /* Item is for sale    */
 #define	BF_HAS_BLAS	00000008
 #define	BF_HAS_PHOT	00000010

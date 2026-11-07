@@ -84,6 +84,11 @@ const char *planetOwnerName(const FePlanet_t *pl, ULONG plNum, BOOL brief)
 	{
 		return(Player[pl->owner].name);
 	}
+	if (pl->flags & BF_NO_OWNER)
+	{
+		return("None");
+	}
+	/* We just don't know (yet) */
 	return("???");
 }
 
@@ -258,10 +263,20 @@ void buildPlDetDisp(void)
 	ui_set_text(fd_PlanetDetailForm->Mobil, workBuf);
 	sprintf(workBuf, "%u", tmpPlanet.TF);
 	ui_set_text(fd_PlanetDetailForm->TF, workBuf);
-	switch(tmpPlanet.xfer)
+	if (planetHomeRace(LastPlanet) >= 0)
+	{
+		ui_set_text(fd_PlanetDetailForm->Transfer, "Home Planet");
+	}
+	else if (!(tmpPlanet.flags & BF_XFER_KNOWN))
+	{
+		/* Only a planet dump tells us this */
+		ui_set_text(fd_PlanetDetailForm->Transfer, "?");
+	}
+	else switch(tmpPlanet.xfer)
 	{
 		case PT_PEACEFULL:
-			ui_set_text(fd_PlanetDetailForm->Transfer, "New Owner");
+			/* The server only tells us "not taken by force" */
+			ui_set_text(fd_PlanetDetailForm->Transfer, "Peaceful");
 			break;
 		case PT_TRADE:
 			ui_set_text(fd_PlanetDetailForm->Transfer, "Trade");
@@ -357,7 +372,8 @@ void buildPlDetDisp(void)
 			raceRelation(workBuf, homeRace, "");
 		}
 	}
-	else if (tmpPlanet.owner == player_num)
+	else if ((tmpPlanet.owner == player_num) ||
+		(tmpPlanet.flags & BF_NO_OWNER))
 	{
 		strcpy(workBuf, "N/A");
 	}

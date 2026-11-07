@@ -679,6 +679,7 @@ void handlePlProd1(const char *line)
 		tmpPlanet.prod[16] = cvtAbvAmt(work);
 		/* Since only the owner can use the census command */
 		tmpPlanet.owner = player_num;
+		tmpPlanet.flags &= ~BF_NO_OWNER;
 		tmpPlanet.flags |= BF_OWNED;
 
 		/* Write the planet */
@@ -784,6 +785,7 @@ void handlePlProd2(const char *line)
 		tmpPlanet.workPer[16] = atoi(work);
 		/* Since only the owner can use the census command */
 		tmpPlanet.owner = player_num;
+		tmpPlanet.flags &= ~BF_NO_OWNER;
 		tmpPlanet.flags |= BF_OWNED;
 
 		/* Write the planet */
@@ -865,6 +867,7 @@ void handlePlGeo(const char *line)
 		}
 		/* Since only the owner can use the census command */
 		tmpPlanet.owner = player_num;
+		tmpPlanet.flags &= ~BF_NO_OWNER;
 		tmpPlanet.flags |= BF_OWNED;
 
 		/* Write the planet */
@@ -925,6 +928,7 @@ void handlePlPop(const char *line)
 
 		/* Since only the owner can use the census command */
 		tmpPlanet.owner = player_num;
+		tmpPlanet.flags &= ~BF_NO_OWNER;
 		tmpPlanet.flags |= BF_OWNED;
 
 		/* Write the planet */
@@ -1278,6 +1282,8 @@ void handlePlDump(const char *line)
 	{
 		tmpPlan.xfer = PT_HOSTILE;
 	}
+	/* The dump tells us for sure (taken by force or not) */
+	tmpPlan.flags |= BF_XFER_KNOWN;
 	pos += 1 * sizeof(char);
 	/* These come from the Imperium side */
 	switch (*pos)
@@ -1399,6 +1405,7 @@ void handlePlDump(const char *line)
 	}
 	/* Since only the owner can use the dump command */
 	tmpPlan.owner = player_num;
+	tmpPlan.flags &= ~BF_NO_OWNER;
 	tmpPlan.flags |= BF_OWNED;
 	tmpPlan.flags &= ~BF_DIRTY;
 
@@ -1529,6 +1536,15 @@ void handlePlScan(const char *line)
 	}
 	/* The server sends 0xff for "nobody"; we use 0 for that */
 	tmpPlan.owner = (tmp < PLAYER_MAX) ? (UBYTE) tmp : 0;
+	if (tmp >= PLAYER_MAX)
+	{
+		/* The server says nobody owns it (as opposed to us not knowing) */
+		tmpPlan.flags |= BF_NO_OWNER;
+	}
+	else
+	{
+		tmpPlan.flags &= ~BF_NO_OWNER;
+	}
 	pos += 2 * sizeof(char);
 	/* Skip over planet name */
 	pos += 12 * sizeof(char);
