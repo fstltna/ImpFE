@@ -2,6 +2,9 @@ Changes by date
 ===============
 
 =20261106=
+* Snap: added the network-status permission, so the desktop portal answers
+  GLib's network questions instead of refusing them with "This call is not
+  available inside the sandbox"
 * Fixed connecting from the snap ("This call is not available inside the
   sandbox"): ImpFE no longer looks up desktop proxy settings, which don't
   apply to Imperium's plain TCP connection

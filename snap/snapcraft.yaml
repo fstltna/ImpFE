@@ -30,6 +30,9 @@ apps:
     extensions: [gnome]
     plugs:
       - network   # talk to the Imperium server
+      - network-status  # lets the desktop portal answer network-status
+                        # questions instead of refusing them ("This call
+                        # is not available inside the sandbox")
       - home      # ImpFE databases live in the user's home folder
     environment:
       # A database is a .fe file plus several companion files next to it.
