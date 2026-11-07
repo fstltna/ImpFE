@@ -2,6 +2,8 @@ Changes by date
 ===============
 
 =20261106=
+* Removed leftover debugging output that the ship and planet lists and the
+  database printed to the terminal
 * Column headings in the ship, planet, item and command lists now line up
   with the columns under any desktop theme, and scroll sideways with them
 * Home planets show the race that owns them (e.g. "Krellian (race)")

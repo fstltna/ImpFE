@@ -105,15 +105,11 @@ void buildPlCensus(void)
 	/* Loop for each known planet */
 	for (plNum=0; plNum < next_planet; plNum++)
 	{
-fprintf(stderr, "*** plNum is %lu!\n", plNum);
-fprintf(stderr, "*** next_planet is %lu!\n", next_planet);
 		/* Make sure the ship has been seen */
 		if (readPlanet(&tmpPlanet, plNum))
 		{
-fprintf(stderr, "*** readPlanet ok %lu!\n", plNum);
 			if (tmpPlanet.last_seen != 0)
 			{
-fprintf(stderr, "*** tempPlanet ok %lu!\n", plNum);
 			strncpy(nameBuf, planetOwnerName(&tmpPlanet, plNum, TRUE), 8);
 			nameBuf[8] = '\0';
 			strncpy(plName, tmpPlanet.name, 9);

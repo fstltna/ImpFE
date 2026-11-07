@@ -606,7 +606,11 @@ BOOL readShip(FeShip_t *shBuf, unsigned long shNum)
 	{
 	    /* See if it is just due to seeking into a hole */
 	    fileErr=ferror(ShipFileHndl);
-	    fprintf(stderr, "Got read error %d in ships file\n", fileErr);
+	    /* Reading past the end just means we haven't seen it yet */
+	    if (fileErr != 0)
+	    {
+		    fprintf(stderr, "Got read error %d in ships file\n", fileErr);
+	    }
 	    if (fileErr == 0) /* XXX Make this match the "read in hole" error */
 	    {
 	    	clearerr(ShipFileHndl);
@@ -667,10 +671,13 @@ BOOL readPlanet(FePlanet_t *plBuf, unsigned long plNum)
 	{
 	    /* See if it is just due to seeking into a hole */
 	    fileErr=ferror(PlanetFileHndl);
-	    fprintf(stderr, "Got read error %d in planets file\n", fileErr);
+	    /* Reading past the end just means we haven't seen it yet */
+	    if (fileErr != 0)
+	    {
+		    fprintf(stderr, "Got read error %d in planets file\n", fileErr);
+	    }
 	    if (fileErr == 0) /* XXX Make this match the "read in hole" error */
 	    {
-fprintf(stderr, "*** Read in hole\n");
 	    	clearerr(PlanetFileHndl);
 		bzero(plBuf, sizeof(FePlanet_t));
 		return(TRUE);
@@ -678,7 +685,6 @@ fprintf(stderr, "*** Read in hole\n");
 	    clearerr(PlanetFileHndl);
 	    return(FALSE);
 	}
-fprintf(stderr, "*** Loaded planet\n");
 	return(TRUE);
 }
 
@@ -725,7 +731,11 @@ BOOL readItem(FeItem_t *itBuf, unsigned long itNum)
 	{
 	    /* See if it is just due to seeking into a hole */
 	    fileErr=ferror(ItemFileHndl);
-	    fprintf(stderr, "Got read error %d in items file\n", fileErr);
+	    /* Reading past the end just means we haven't seen it yet */
+	    if (fileErr != 0)
+	    {
+		    fprintf(stderr, "Got read error %d in items file\n", fileErr);
+	    }
 	    clearerr(ItemFileHndl);
 	    if (fileErr == 0) /* XXX Make this match the "read in hole" error */
 	    {
@@ -785,7 +795,11 @@ BOOL readSector(FeSector_t *scBuf, USHORT row, USHORT col)
 	{
 	    /* See if it is just due to seeking into a hole */
 	    fileErr=ferror(SectorFileHndl);
-	    fprintf(stderr, "Got read error %d in sectors file (%u,%u)\n", fileErr, row, col);
+	    /* Reading past the end just means we haven't seen it yet */
+	    if (fileErr != 0)
+	    {
+		    fprintf(stderr, "Got read error %d in sectors file (%u,%u)\n", fileErr, row, col);
+	    }
 	    clearerr(SectorFileHndl);
 	    if (fileErr == 0) /* XXX Make this match the "read in hole" error */
 	    {

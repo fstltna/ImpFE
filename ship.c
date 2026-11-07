@@ -54,44 +54,34 @@ void buildShCensus(void)
 	/* Clear the existing contents, if any */
 	ui_browser_clear(fd_ShipCensusForm->ShBrowse);
 	/* Loop for each known ship */
-fprintf(stderr, "*** start of loop\n");
 	for (shNum=0; shNum < next_ship; shNum++)
 	{
-fprintf(stderr, "*** shNum is %lu!\n", shNum);
-fprintf(stderr, "*** next_ship is %lu!\n", next_ship);
 		/* Make sure the ship has been seen */
 		if (readShip(&tmpShip, shNum))
 		{
-fprintf(stderr, "*** readShip ok %lu!\n", shNum);
 			if(tmpShip.last_seen != 0)
 			{
-fprintf(stderr, "*** tempship ok %lu!\n", shNum);
 				if ((tmpShip.owner != 0) && (tmpShip.owner < PLAYER_MAX))
 				{
-fprintf(stderr, "*** owner %u!\n", tmpShip.owner);
 					strncpy(nameBuf, Player[tmpShip.owner].name, 9);
 					nameBuf[9] = '\0';
 				}
 				else
 				{
-fprintf(stderr, "*** unknown owner\n");
 					strcpy(nameBuf, "???");
 				}
 				strncpy(shName, tmpShip.name, 9);
 				shName[9]='\0';
 				if (tmpShip.ShipType != 0)
 				{
-fprintf(stderr, "*** ship type %u!\n", tmpShip.ShipType);
 					shType = tmpShip.ShipType;
 				}
 				else
 				{
-fprintf(stderr, "*** ship type unknown!\n");
 					shType = '?';
 				}
 				crew = tmpShip.num_civ + tmpShip.num_mil + tmpShip.num_sci +
 					tmpShip.num_ofc;
-fprintf(stderr, "*** ship crew %lu!\n", crew);
 				if (crew < 1000)
 				{
 					sprintf(crewBuf, "%3lu", crew);
@@ -104,19 +94,16 @@ fprintf(stderr, "*** ship crew %lu!\n", crew);
 				{
 					sprintf(crewBuf, "%2luK", crew / 1000);
 				}
-fprintf(stderr, "*** about to set ship location\n");
 				sprintf(location, "%4u, %4u", tmpShip.sh_row, tmpShip.sh_col);
 				strcpy(tBuff, ctime(&tmpShip.last_seen));
 				tBuff[19]='\0';
 				sprintf(workBuf, "%8lu  %8s   %8s    %c   %s  %s %3u %s", shNum,
 						shName, nameBuf, shType, location, crewBuf, tmpShip.efficiency,
 						&tBuff[4]);
-fprintf(stderr, "*** about to add browser line\n");
 				ui_browser_add_line(fd_ShipCensusForm->ShBrowse, workBuf);
 			}
 		}
 	}
-fprintf(stderr, "*** about to unfreeze form\n");
 }
 
 /*
