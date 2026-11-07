@@ -9,6 +9,7 @@
  * any later version.
  */
 
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include "gtkui.h"
@@ -774,6 +775,170 @@ void ui_browser_set_topline(GtkWidget *browser, int line)
 /* ------------------------------------------------------------------ */
 
 /*
+ * xpm_colour - parses the colour part of an XPM colour line, e.g.
+ *              "c #FF0000" or "c None", into *rgba (0xRRGGBBAA)
+ */
+static gboolean xpm_colour(const char *spec, guint32 *rgba)
+{
+	gchar **words;
+	GString *value;
+	GdkRGBA colour;
+	gboolean ok = FALSE, inColour = FALSE;
+	int i;
+
+	/* Use the "c" (colour display) value; it can be several words */
+	words = g_strsplit_set(spec, " \t", -1);
+	value = g_string_new(NULL);
+	for (i = 0; words[i] != NULL; i++)
+	{
+		if (words[i][0] == '\0')
+		{
+			continue;
+		}
+		if ((strcmp(words[i], "c") == 0) || (strcmp(words[i], "m") == 0) ||
+			(strcmp(words[i], "g") == 0) || (strcmp(words[i], "g4") == 0) ||
+			(strcmp(words[i], "s") == 0))
+		{
+			if (inColour && (value->len > 0))
+			{
+				break;
+			}
+			inColour = (strcmp(words[i], "c") == 0);
+			continue;
+		}
+		if (inColour)
+		{
+			if (value->len > 0)
+			{
+				g_string_append_c(value, ' ');
+			}
+			g_string_append(value, words[i]);
+		}
+	}
+	if (g_ascii_strcasecmp(value->str, "None") == 0)
+	{
+		*rgba = 0;	/* transparent */
+		ok = TRUE;
+	}
+	else if (gdk_rgba_parse(&colour, value->str))
+	{
+		*rgba = ((guint32) (colour.red * 255.0 + 0.5) << 24) |
+			((guint32) (colour.green * 255.0 + 0.5) << 16) |
+			((guint32) (colour.blue * 255.0 + 0.5) << 8) | 0xFF;
+		ok = TRUE;
+	}
+	g_string_free(value, TRUE);
+	g_strfreev(words);
+	return(ok);
+}
+
+/*
+ * xpm_decode - decodes XPM image data compiled into the program.
+ *
+ *              GTK's own XPM support is an optional plug-in that newer
+ *              systems (and the GNOME runtime snaps use) leave out, so
+ *              ImpFE reads its images itself. Returns NULL if the data
+ *              is malformed.
+ */
+static GdkPixbuf *xpm_decode(const char **xpm)
+{
+	GdkPixbuf *pb;
+	GHashTable *colours;
+	guint32 rgba, lookup1[256];
+	gboolean have1[256];
+	int width, height, ncolours, cpp, i, x, y;
+	guchar *pixels, *p;
+	int stride;
+	gpointer found;
+
+	if ((xpm == NULL) || (xpm[0] == NULL) ||
+		(sscanf(xpm[0], "%d %d %d %d", &width, &height, &ncolours, &cpp) != 4) ||
+		(width < 1) || (height < 1) || (width > 4096) || (height > 4096) ||
+		(ncolours < 1) || (ncolours > 65536) || (cpp < 1) || (cpp > 4))
+	{
+		return(NULL);
+	}
+
+	/* Colour table: one-character codes use a quick array */
+	colours = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	memset(have1, 0, sizeof(have1));
+	for (i = 0; i < ncolours; i++)
+	{
+		const char *line = xpm[1 + i];
+
+		if ((line == NULL) || (strlen(line) < (size_t) cpp) ||
+			!xpm_colour(line + cpp, &rgba))
+		{
+			g_hash_table_destroy(colours);
+			return(NULL);
+		}
+		if (cpp == 1)
+		{
+			lookup1[(guchar) line[0]] = rgba;
+			have1[(guchar) line[0]] = TRUE;
+		}
+		else
+		{
+			g_hash_table_insert(colours, g_strndup(line, (gsize) cpp),
+				GUINT_TO_POINTER(rgba));
+		}
+	}
+
+	pb = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, width, height);
+	if (pb == NULL)
+	{
+		g_hash_table_destroy(colours);
+		return(NULL);
+	}
+	pixels = gdk_pixbuf_get_pixels(pb);
+	stride = gdk_pixbuf_get_rowstride(pb);
+	for (y = 0; y < height; y++)
+	{
+		const char *row = xpm[1 + ncolours + y];
+		char key[5];
+
+		if ((row == NULL) || (strlen(row) < (size_t) (width * cpp)))
+		{
+			g_object_unref(pb);
+			g_hash_table_destroy(colours);
+			return(NULL);
+		}
+		p = pixels + (y * stride);
+		for (x = 0; x < width; x++)
+		{
+			if (cpp == 1)
+			{
+				if (!have1[(guchar) row[x]])
+				{
+					g_object_unref(pb);
+					g_hash_table_destroy(colours);
+					return(NULL);
+				}
+				rgba = lookup1[(guchar) row[x]];
+			}
+			else
+			{
+				memcpy(key, &row[x * cpp], (size_t) cpp);
+				key[cpp] = '\0';
+				if (!g_hash_table_lookup_extended(colours, key, NULL, &found))
+				{
+					g_object_unref(pb);
+					g_hash_table_destroy(colours);
+					return(NULL);
+				}
+				rgba = GPOINTER_TO_UINT(found);
+			}
+			*p++ = (guchar) (rgba >> 24);
+			*p++ = (guchar) (rgba >> 16);
+			*p++ = (guchar) (rgba >> 8);
+			*p++ = (guchar) rgba;
+		}
+	}
+	g_hash_table_destroy(colours);
+	return(pb);
+}
+
+/*
  * ui_xpm_pixbuf - converts compiled-in XPM data to a pixbuf. Results
  *                 are cached, so this is cheap to call repeatedly.
  */
@@ -789,10 +954,14 @@ GdkPixbuf *ui_xpm_pixbuf(const char **xpm)
 	pb = (GdkPixbuf *) g_hash_table_lookup(cache, xpm);
 	if (pb == NULL)
 	{
-		pb = gdk_pixbuf_new_from_xpm_data(xpm);
+		pb = xpm_decode(xpm);
 		if (pb != NULL)
 		{
 			g_hash_table_insert(cache, (gpointer) xpm, pb);
+		}
+		else
+		{
+			g_warning("ImpFE: could not decode a built-in image");
 		}
 	}
 	return(pb);

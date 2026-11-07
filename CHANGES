@@ -2,6 +2,9 @@ Changes by date
 ===============
 
 =20261106=
+* Fixed the blank map and missing About/window icon in the snap: ImpFE now
+  decodes its built-in XPM images itself instead of relying on GTK's XPM
+  plug-in, which newer systems and the GNOME snap runtime leave out
 * Planets the server reports as unowned show "None" (??? now only means
   "not known yet"); the Transfer field shows "Home Planet" for home planets
   and "?" until a planet dump says how a planet was taken, instead of
