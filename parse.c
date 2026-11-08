@@ -1802,30 +1802,21 @@ void handleShipScDet(const char *line)
 	workBuf[4]='\0';
 	(void) sscanf(workBuf, "%lx", &owner);
 	pos += 4 * sizeof(char);
+	/* The class comes as a letter, which is how we store it too */
 	switch(*pos)
 	{
 		case 'a':
-			class = st_a;
-			break;
 		case 'b':
-			class = st_b;
-			break;
 		case 'c':
-			class = st_c;
-			break;
 		case 'd':
-			class = st_d;
-			break;
 		case 'e':
-			class = st_e;
-			break;
 		case 'm':
-			class = st_m;
+			class = *pos;
 			break;
 		default:
 			fprintf(stderr, "*** unknown ship class in handleShipScDet %u\n",
 					(int) *pos);
-			class = st_unknown;
+			class = '?';
 			break;
 	}
 	pos += 1 * sizeof(char);

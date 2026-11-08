@@ -2,6 +2,9 @@ Changes by date
 ===============
 
 =20261106=
+* Fixed the ship census showing a box instead of the class letter for ships
+  found by a scan (the class was saved as a number); older databases are
+  shown correctly too
 * Snap: added the network-status permission, so the desktop portal answers
   GLib's network questions instead of refusing them with "This call is not
   available inside the sandbox"

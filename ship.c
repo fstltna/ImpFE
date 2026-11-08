@@ -72,7 +72,12 @@ void buildShCensus(void)
 				}
 				strncpy(shName, tmpShip.name, 9);
 				shName[9]='\0';
-				if (tmpShip.ShipType != 0)
+				if ((tmpShip.ShipType >= st_a) && (tmpShip.ShipType <= st_m))
+				{
+					/* Older versions saved some classes as numbers */
+					shType = "abcdem"[tmpShip.ShipType - st_a];
+				}
+				else if (tmpShip.ShipType != 0)
 				{
 					shType = tmpShip.ShipType;
 				}

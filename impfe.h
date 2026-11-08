@@ -115,7 +115,7 @@ typedef struct {
 	unsigned char
 		flags;      /* Bitfield - See above for meanings */
 	long	last_seen;
-	UBYTE	ShipType;   /* st_a -> st_m */
+	UBYTE	ShipType;   /* class letter: a-e or m, ? if unknown */
 	ULONG	planet;     /* What planet it is on, if any */
 	USHORT
 		fuelLeft,   /* fuel left */
